@@ -28,7 +28,7 @@ settings = get_settings()
 logger = get_logger(__name__)
 
 MOCK_TRANSCRIPT: str = (
-    "This is a sample transcript from VoidFill voice processing."
+    "I need to study calculus tonight. "
 )
 
 
@@ -86,7 +86,25 @@ async def process_job(job_id_str: str) -> None:
                     error=str(e),
                 )
 
-            # --- Step 4: Mark completed ---
+            # --- Step 4: Autonomous action execution ---
+            try:
+                from app.services.action_service import ActionService
+
+                action_service = ActionService(session)
+                await action_service.execute_from_intelligence(
+                    job_id=job_id,
+                    user_id=job.user_id,
+                )
+                await session.commit()
+            except Exception as e:
+                await session.rollback()
+                logger.error(
+                    "action_execution_failed",
+                    job_id=job_id_str,
+                    error=str(e),
+                )
+
+            # --- Step 5: Mark completed ---
             await repo.mark_completed(job_id)
             await session.commit()
             logger.info("job_completed", job_id=job_id_str)

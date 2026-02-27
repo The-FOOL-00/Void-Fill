@@ -44,3 +44,16 @@ class VoiceIntelligenceRepository:
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def mark_action_executed(self, record_id: UUID) -> None:
+        """Set the action_executed flag to True for idempotency.
+
+        Args:
+            record_id: UUID primary key of the VoiceIntelligence record.
+        """
+        stmt = select(VoiceIntelligence).where(VoiceIntelligence.id == record_id)
+        result = await self._session.execute(stmt)
+        record = result.scalar_one_or_none()
+        if record is not None:
+            record.action_executed = True
+            await self._session.flush()

@@ -37,6 +37,9 @@ class VoiceIntelligence(Base):
         ForeignKey("goals.id", ondelete="SET NULL"),
         nullable=True,
     )
+    action_executed: Mapped[bool] = mapped_column(
+        default=False, server_default="false", nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

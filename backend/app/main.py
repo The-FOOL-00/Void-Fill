@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import goals, schedule, suggestions, voice, void
+from app.api.v1 import goals, notes, schedule, suggestions, voice, void
 from app.core.config import get_settings
 from app.core.database import close_db, init_db
 from app.core.exceptions import (
@@ -144,3 +144,4 @@ app.include_router(goals.router, prefix="/api/v1")
 app.include_router(schedule.router, prefix="/api/v1")
 app.include_router(suggestions.router, prefix="/api/v1")
 app.include_router(void.router, prefix="/api/v1")
+app.include_router(notes.router, prefix="/api/v1")
