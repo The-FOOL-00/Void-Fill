@@ -23,7 +23,6 @@ from app.core.database import async_session_factory, init_db
 from app.core.logging import get_logger, setup_logging
 from app.core.redis import close_redis, dequeue_voice_job
 from app.repositories.voice_job_repository import VoiceJobRepository
-from app.services.voice_intelligence_service import VoiceIntelligenceService
 
 settings = get_settings()
 logger = get_logger(__name__)
@@ -66,7 +65,31 @@ async def process_job(job_id_str: str) -> None:
             # --- Step 2: Store transcript ---
             await repo.update_transcript(job_id, transcript)
             await session.commit()
-            logger.info("transcript_stored", job_id=job_id_str)
+            logger.info("transcription_complete", path=str(audio_path))
+
+            # --- Step 3: Intelligence pipeline ---
+            try:
+                from app.services.voice_intelligence_service import VoiceIntelligenceService
+
+                intelligence_service = VoiceIntelligenceService(session)
+                await intelligence_service.process_transcript(
+                    voice_job_id=job_id,
+                    user_id=job.user_id,
+                    transcript=transcript,
+                )
+                await session.commit()
+            except Exception as e:
+                await session.rollback()
+                logger.error(
+                    "intelligence_processing_failed",
+                    job_id=job_id_str,
+                    error=str(e),
+                )
+
+            # --- Step 4: Mark completed ---
+            await repo.mark_completed(job_id)
+            await session.commit()
+            logger.info("job_completed", job_id=job_id_str)
 
         except Exception as exc:
             await session.rollback()
@@ -75,31 +98,6 @@ async def process_job(job_id_str: str) -> None:
                 await err_repo.update_error(job_id, str(exc))
                 await err_session.commit()
             logger.error("job_failed", job_id=job_id_str, error=str(exc))
-            return
-
-    # --- Step 3: Intelligence pipeline (separate transaction) ---
-    try:
-        async with async_session_factory() as intel_session:
-            intel_service = VoiceIntelligenceService(intel_session)
-            record = await intel_service.process_transcript(
-                voice_job_id=job_id,
-                user_id=job.user_id,
-                transcript=transcript,
-            )
-            await intel_session.commit()
-            logger.info(
-                "intelligence_complete",
-                job_id=job_id_str,
-                intent=record.intent,
-            )
-    except Exception as exc:
-        logger.error(
-            "intelligence_failed",
-            job_id=job_id_str,
-            error=str(exc),
-        )
-
-    logger.info("job_completed", job_id=job_id_str)
 
 
 async def transcribe_audio(audio_path: Path) -> str:

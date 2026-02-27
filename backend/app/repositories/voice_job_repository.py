@@ -60,7 +60,7 @@ class VoiceJobRepository:
         return job
 
     async def update_transcript(self, job_id: UUID, transcript: str) -> VoiceJob | None:
-        """Store the transcription result and mark the job as completed.
+        """Store the transcription result without changing job status.
 
         Args:
             job_id: UUID of the voice job.
@@ -73,10 +73,20 @@ class VoiceJobRepository:
         if job is None:
             return None
         job.transcript = transcript
-        job.status = "completed"
         await self._session.flush()
         await self._session.refresh(job)
         return job
+
+    async def mark_completed(self, job_id: UUID) -> VoiceJob | None:
+        """Mark a voice job as completed.
+
+        Args:
+            job_id: UUID of the voice job.
+
+        Returns:
+            The updated VoiceJob, or ``None`` if not found.
+        """
+        return await self.update_status(job_id, "completed")
 
     async def update_error(self, job_id: UUID, error: str) -> VoiceJob | None:
         """Record an error message and mark the job as failed.
