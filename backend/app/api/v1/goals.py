@@ -1,5 +1,6 @@
-"""Goal endpoints — create and list user goals."""
+"""Goal endpoints — create, list, and semantically search user goals."""
 
+from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -7,7 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.schemas.goal_schema import GoalCreate, GoalListResponse, GoalResponse
+from app.schemas.goal_schema import (
+    GoalCreate,
+    GoalListResponse,
+    GoalResponse,
+    GoalSearchRequest,
+    GoalSearchResult,
+)
 from app.services.goal_service import GoalService
 
 router = APIRouter(prefix="/goals", tags=["goals"])
@@ -41,3 +48,22 @@ async def list_goals(
     """Return all goals belonging to the authenticated user, ordered by priority."""
     service = GoalService(db)
     return await service.list_goals(user_id)
+
+
+@router.post(
+    "/search",
+    response_model=List[GoalSearchResult],
+    summary="Search goals by semantic similarity",
+)
+async def search_goals(
+    payload: GoalSearchRequest,
+    user_id: UUID = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> List[GoalSearchResult]:
+    """Find goals semantically similar to a natural-language query.
+
+    Uses sentence-transformers to embed the query and pgvector cosine
+    similarity to rank stored goals.
+    """
+    service = GoalService(db)
+    return await service.search_goals_by_text(user_id, payload.query, payload.limit)

@@ -46,6 +46,7 @@ class Settings(BaseSettings):
 
     # AI / Embeddings
     embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_model_name: str = "all-MiniLM-L6-v2"
     embedding_dimension: int = 384
 
     # Voice processing

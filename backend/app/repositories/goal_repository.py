@@ -1,5 +1,6 @@
 """Repository for Goal database operations."""
 
+from typing import List
 from uuid import UUID
 
 from sqlalchemy import select
@@ -54,6 +55,32 @@ class GoalRepository:
             select(Goal)
             .where(Goal.user_id == user_id)
             .order_by(Goal.priority.desc(), Goal.created_at.desc())
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def search_by_embedding(
+        self,
+        user_id: UUID,
+        embedding: List[float],
+        limit: int = 5,
+    ) -> list[Goal]:
+        """Find the closest goals using pgvector cosine distance.
+
+        Args:
+            user_id: UUID of the owning user.
+            embedding: The query embedding vector (384 dimensions).
+            limit: Maximum number of results to return.
+
+        Returns:
+            List of Goal instances ordered by cosine similarity (closest first).
+        """
+        stmt = (
+            select(Goal)
+            .where(Goal.user_id == user_id)
+            .where(Goal.embedding.isnot(None))
+            .order_by(Goal.embedding.cosine_distance(embedding))
+            .limit(limit)
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
