@@ -1,17 +1,19 @@
-"""Service layer for voice upload and transcription processing."""
+"""Service layer for voice upload and async transcription pipeline."""
 
 import uuid
 from pathlib import Path
 from uuid import UUID
 
+import aiofiles
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.exceptions import NotFoundError, VoiceProcessingError
 from app.core.logging import get_logger
-from app.models.voice_log import VoiceLog
-from app.repositories.voice_repository import VoiceRepository
+from app.core.redis import enqueue_voice_job
+from app.models.voice_job import VoiceJob
+from app.repositories.voice_job_repository import VoiceJobRepository
 from app.schemas.voice_schema import VoiceResultResponse, VoiceUploadResponse
 
 logger = get_logger(__name__)
@@ -19,118 +21,117 @@ settings = get_settings()
 
 
 class VoiceService:
-    """Handles voice file ingestion, transcription, and intent detection."""
+    """Orchestrates voice file ingestion, job creation, and result retrieval."""
 
     def __init__(self, session: AsyncSession) -> None:
-        self._repo = VoiceRepository(session)
+        self._repo = VoiceJobRepository(session)
         self._session = session
 
     async def upload(self, user_id: UUID, file: UploadFile) -> VoiceUploadResponse:
-        """Accept a voice file, persist metadata, and return a job id.
+        """Accept a voice file, persist it, create a job, and enqueue for processing.
 
-        The actual transcription is recorded synchronously for now.
-        In production this would dispatch to a background worker (Celery / ARQ).
+        The endpoint returns immediately with a ``queued`` status.  A background
+        worker picks the job off the Redis queue and performs transcription.
 
         Args:
             user_id: The authenticated user's UUID.
             file: The uploaded audio file.
 
         Returns:
-            A response containing the job_id and initial status.
+            A response containing the job_id and ``queued`` status.
 
         Raises:
-            VoiceProcessingError: If saving the file fails.
+            VoiceProcessingError: If saving the audio file to disk fails.
         """
-        upload_dir = Path(settings.voice_upload_dir)
-        upload_dir.mkdir(parents=True, exist_ok=True)
+        audio_path = await self._store_audio_file(file)
 
-        job_id = uuid.uuid4()
-        file_extension = Path(file.filename or "audio.wav").suffix
-        dest = upload_dir / f"{job_id}{file_extension}"
+        job = await self._create_voice_job(user_id, str(audio_path))
 
-        try:
-            content = await file.read()
-            dest.write_bytes(content)
-        except Exception as exc:
-            logger.error("voice_upload_save_failed", error=str(exc), job_id=str(job_id))
-            raise VoiceProcessingError(f"Failed to save uploaded file: {exc}") from exc
+        await self._enqueue_job(job.id)
 
-        transcript = await self._transcribe(dest)
-        intent = self._detect_intent(transcript)
-
-        voice_log = VoiceLog(
-            id=job_id,
-            user_id=user_id,
-            transcript=transcript,
-            intent=intent,
-        )
-        await self._repo.create(voice_log)
-
-        logger.info("voice_upload_complete", job_id=str(job_id), intent=intent)
-        return VoiceUploadResponse(job_id=job_id, status="completed")
+        logger.info("voice_upload_accepted", job_id=str(job.id), user_id=str(user_id))
+        return VoiceUploadResponse(job_id=job.id, status="queued")
 
     async def get_result(self, user_id: UUID, job_id: UUID) -> VoiceResultResponse:
-        """Retrieve the processing result for a given voice job.
+        """Retrieve the current status and transcript of a voice job.
 
         Args:
             user_id: The authenticated user's UUID.
             job_id: The UUID returned from the upload endpoint.
 
         Returns:
-            A response with transcript and intent data.
+            A response with current status and transcript (null if not yet done).
 
         Raises:
-            NotFoundError: If no voice log matches the job_id.
+            NotFoundError: If no voice job matches the job_id for this user.
         """
-        voice_log = await self._repo.get_by_id(job_id)
-        if voice_log is None or voice_log.user_id != user_id:
-            raise NotFoundError("VoiceLog", job_id)
+        job = await self._repo.get_job(job_id)
+        if job is None or job.user_id != user_id:
+            raise NotFoundError("VoiceJob", job_id)
 
         return VoiceResultResponse(
-            job_id=voice_log.id,
-            status="completed",
-            transcript=voice_log.transcript,
-            intent=voice_log.intent,
-            created_at=voice_log.created_at,
+            job_id=job.id,
+            status=job.status,
+            transcript=job.transcript,
+            created_at=job.created_at,
         )
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    async def _transcribe(self, audio_path: Path) -> str:
-        """Run speech-to-text on the given audio file.
-
-        Currently returns a deterministic placeholder transcript.
-        The Whisper / faster-whisper integration will replace this body.
+    async def _store_audio_file(self, file: UploadFile) -> Path:
+        """Save the uploaded audio bytes to the configured storage directory.
 
         Args:
-            audio_path: Path to the saved audio file.
+            file: The uploaded audio file.
 
         Returns:
-            The transcribed text.
+            The Path to the saved file on disk.
+
+        Raises:
+            VoiceProcessingError: If writing the file fails.
         """
-        logger.info("transcription_started", path=str(audio_path))
-        # Whisper integration point — replace with actual model call
-        return f"[transcript from {audio_path.name}]"
+        audio_dir = Path(settings.audio_storage_path)
+        audio_dir.mkdir(parents=True, exist_ok=True)
+
+        file_extension = Path(file.filename or "audio.wav").suffix
+        filename = f"{uuid.uuid4()}{file_extension}"
+        dest = audio_dir / filename
+
+        try:
+            content = await file.read()
+            async with aiofiles.open(dest, "wb") as f:
+                await f.write(content)
+        except Exception as exc:
+            logger.error("voice_file_save_failed", error=str(exc), path=str(dest))
+            raise VoiceProcessingError(f"Failed to save uploaded file: {exc}") from exc
+
+        logger.info("voice_file_stored", path=str(dest), size=len(content))
+        return dest
+
+    async def _create_voice_job(self, user_id: UUID, audio_path: str) -> VoiceJob:
+        """Create and persist a new VoiceJob record with status ``queued``.
+
+        Args:
+            user_id: The owning user's UUID.
+            audio_path: Absolute path to the stored audio file.
+
+        Returns:
+            The persisted VoiceJob instance.
+        """
+        job = VoiceJob(
+            user_id=user_id,
+            status="queued",
+            audio_path=audio_path,
+        )
+        return await self._repo.create_job(job)
 
     @staticmethod
-    def _detect_intent(transcript: str) -> str:
-        """Classify the transcript into a coarse intent category.
-
-        Will be replaced by the LLM parsing service module.
+    async def _enqueue_job(job_id: UUID) -> None:
+        """Push the job onto the Redis voice processing queue.
 
         Args:
-            transcript: The transcribed text.
-
-        Returns:
-            A string intent label.
+            job_id: The UUID of the job to enqueue.
         """
-        lowered = transcript.lower()
-        if any(kw in lowered for kw in ("schedule", "meeting", "calendar", "block")):
-            return "schedule"
-        if any(kw in lowered for kw in ("goal", "objective", "target", "aim")):
-            return "goal"
-        if any(kw in lowered for kw in ("suggest", "recommend", "idea", "help")):
-            return "suggestion"
-        return "general"
+        await enqueue_voice_job(str(job_id))

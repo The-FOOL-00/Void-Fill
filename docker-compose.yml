@@ -18,6 +18,25 @@ services:
         condition: service_healthy
     volumes:
       - voice_uploads:/tmp/voidfill_voice
+      - audio_data:/app/audio
+    restart: unless-stopped
+
+  # ── Voice Worker ────────────────────────────────────────────
+  voice-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voidfill-voice-worker
+    command: python -m app.workers.voice_worker
+    env_file:
+      - ./backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - audio_data:/app/audio
     restart: unless-stopped
 
   # ── PostgreSQL with pgvector ────────────────────────────────
@@ -58,3 +77,4 @@ volumes:
   postgres_data:
   redis_data:
   voice_uploads:
+  audio_data:

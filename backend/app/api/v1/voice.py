@@ -24,9 +24,10 @@ async def upload_voice(
     user_id: UUID = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> VoiceUploadResponse:
-    """Accept an audio file and start transcription processing.
+    """Accept an audio file, create a processing job, and return immediately.
 
-    Returns a job identifier that can be polled via the result endpoint.
+    The job is enqueued onto a Redis queue for background transcription.
+    Poll ``GET /voice/result/{job_id}`` to retrieve the transcript.
     """
     service = VoiceService(db)
     return await service.upload(user_id, file)
@@ -42,6 +43,9 @@ async def get_voice_result(
     user_id: UUID = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> VoiceResultResponse:
-    """Retrieve the transcription and intent for a previously uploaded voice file."""
+    """Retrieve the current status and transcript for a voice processing job.
+
+    ``transcript`` is ``null`` until the job reaches ``completed`` status.
+    """
     service = VoiceService(db)
     return await service.get_result(user_id, job_id)

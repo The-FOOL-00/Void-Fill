@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     # Voice processing
     voice_upload_dir: str = "/tmp/voidfill_voice"
     max_voice_file_size_mb: int = 25
+    audio_storage_path: str = "/app/audio"
 
     # Logging
     log_level: str = "INFO"
