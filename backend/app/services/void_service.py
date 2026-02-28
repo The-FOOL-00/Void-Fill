@@ -1,4 +1,9 @@
-"""Service layer for detecting and returning current void (free) time."""
+"""Void Intelligence Engine — deterministic scheduler + AI suggestions.
+
+Detects whether the user is currently in a scheduled block or a void
+(free-time) slot by querying the schedule with pure SQL + Python logic.
+No LLM calls are made in this module.
+"""
 
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -7,104 +12,133 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.repositories.schedule_repository import ScheduleRepository
+from app.repositories.suggestion_repository import SuggestionRepository
 
 logger = get_logger(__name__)
 
 
-class VoidSlot:
-    """Represents a gap in the user's schedule."""
-
-    def __init__(self, start: datetime, end: datetime) -> None:
-        self.start = start
-        self.end = end
-        self.duration_minutes = int((end - start).total_seconds() / 60)
-
-    def to_dict(self) -> dict:
-        """Serialize the void slot to a JSON-friendly dictionary."""
-        return {
-            "start": self.start.isoformat(),
-            "end": self.end.isoformat(),
-            "duration_minutes": self.duration_minutes,
-        }
-
-
 class VoidService:
-    """Analyses a user's schedule to find unbooked time slots (voids).
+    """Deterministic void-slot detection and suggestion surfacing.
 
-    A "void" is any gap between scheduled blocks within the current day
-    that could be used for productive work aligned with the user's goals.
+    A **void** is any gap between scheduled blocks within the next 12 hours
+    that could be filled with productive work aligned with the user's goals.
+
+    IMPORTANT: This service is instantiated *per request* — never cached at
+    module level — to avoid stale-session bugs.
     """
 
     def __init__(self, session: AsyncSession) -> None:
         self._schedule_repo = ScheduleRepository(session)
+        self._suggestion_repo = SuggestionRepository(session)
 
-    async def get_current_void(self, user_id: UUID) -> dict:
-        """Return the current or next available void slot for the user.
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
-        Scans today's schedule blocks and identifies gaps.  Returns the
-        first void that starts at or after the current UTC time.
+    async def get_void_status(self, user_id: UUID) -> dict:
+        """Return the user's current schedule status and void information.
+
+        Steps (all deterministic — no LLM):
+        1. Compute ``now`` and a 12-hour look-ahead window.
+        2. Fetch overlapping schedule blocks (sorted ASC).
+        3. Check if the user is inside a block right now.
+        4. If not, compute the void slot until the next block (or 12 h).
+        5. Load top suggestions.
+        6. Return a plain dict (no ORM objects).
 
         Args:
             user_id: The authenticated user's UUID.
 
         Returns:
-            A dictionary describing the void slot, or a message if none found.
+            A JSON-serialisable dictionary matching ``VoidNowResponse``.
         """
-        now = datetime.now(tz=timezone.utc)
-        day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        day_end = day_start + timedelta(days=1)
+        logger.info("void_status_requested", user_id=str(user_id))
 
-        blocks = await self._schedule_repo.list_by_user_and_range(
-            user_id, day_start, day_end
+        # Step 1 — explicit UTC time
+        now = datetime.now(timezone.utc)
+        range_end = now + timedelta(hours=12)
+
+        # Step 2 — load schedule blocks (guaranteed ORDER BY start_time ASC)
+        blocks = await self._schedule_repo.list_overlapping_blocks(
+            user_id, now, range_end
         )
 
-        voids = self._find_voids(blocks, day_start, day_end)
-
-        current_or_next = next(
-            (v for v in voids if v.end > now),
+        # Step 3 — am I inside a block right now?
+        current_block = next(
+            (b for b in blocks if b.start_time <= now and b.end_time >= now),
             None,
         )
 
-        if current_or_next is None:
-            logger.info("no_void_found", user_id=str(user_id))
-            return {"void": None, "message": "No available void slots remaining today"}
+        if current_block is not None:
+            logger.info(
+                "user_in_scheduled_block",
+                user_id=str(user_id),
+                block_type=current_block.block_type,
+            )
+            return {
+                "status": "scheduled",
+                "current_block": self._block_to_dict(current_block),
+                "void_slot": None,
+                "suggestions": [],
+            }
+
+        # Step 4 — user is in a void; find the next block
+        future_blocks = [b for b in blocks if b.start_time > now]
+        if future_blocks:
+            void_start = now
+            void_end = future_blocks[0].start_time
+        else:
+            void_start = now
+            void_end = range_end
+
+        # Step 5 — duration (never negative)
+        duration_minutes = max(
+            0, int((void_end - void_start).total_seconds() / 60)
+        )
 
         logger.info(
-            "void_found",
+            "void_slot_detected",
             user_id=str(user_id),
-            start=current_or_next.start.isoformat(),
-            duration=current_or_next.duration_minutes,
+            duration_minutes=duration_minutes,
         )
-        return {"void": current_or_next.to_dict(), "message": "Void slot available"}
+
+        # Step 6 — load suggestions (empty list if none exist, never null)
+        raw_suggestions = await self._suggestion_repo.list_by_user(
+            user_id=user_id, limit=5
+        )
+        suggestion_dicts = [
+            {
+                "goal_id": str(s.goal_id) if s.goal_id else None,
+                "title": s.text,
+                "score": round(s.score, 2),
+            }
+            for s in raw_suggestions
+        ]
+
+        # Step 7 — return plain dict (no ORM objects)
+        return {
+            "status": "void",
+            "current_block": None,
+            "void_slot": {
+                "start_time": void_start.isoformat(),
+                "end_time": void_end.isoformat(),
+                "duration_minutes": duration_minutes,
+            },
+            "suggestions": suggestion_dicts,
+        }
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _find_voids(
-        blocks: list, day_start: datetime, day_end: datetime
-    ) -> list[VoidSlot]:
-        """Compute free gaps between sorted schedule blocks.
-
-        Args:
-            blocks: Schedule blocks sorted by start_time ascending.
-            day_start: Beginning of the analysis window.
-            day_end: End of the analysis window.
-
-        Returns:
-            List of VoidSlot instances representing free gaps.
-        """
-        voids: list[VoidSlot] = []
-        cursor = day_start
-
-        for block in blocks:
-            if block.start_time > cursor:
-                voids.append(VoidSlot(start=cursor, end=block.start_time))
-            if block.end_time > cursor:
-                cursor = block.end_time
-
-        if cursor < day_end:
-            voids.append(VoidSlot(start=cursor, end=day_end))
-
-        return voids
+    def _block_to_dict(block) -> dict:
+        """Convert a ScheduleBlock ORM instance to a plain dictionary."""
+        return {
+            "id": str(block.id),
+            "user_id": str(block.user_id),
+            "start_time": block.start_time.isoformat(),
+            "end_time": block.end_time.isoformat(),
+            "block_type": block.block_type,
+            "created_at": block.created_at.isoformat(),
+        }

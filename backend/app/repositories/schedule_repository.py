@@ -84,6 +84,39 @@ class ScheduleRepository:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
+    async def list_overlapping_blocks(
+        self,
+        user_id: UUID,
+        range_start: datetime,
+        range_end: datetime,
+    ) -> list[ScheduleBlock]:
+        """Return schedule blocks that overlap with a given time range.
+
+        Uses proper overlap detection:
+            start_time < range_end AND end_time > range_start
+
+        Results are guaranteed sorted by start_time ASC.
+
+        Args:
+            user_id: UUID of the owning user.
+            range_start: Start of the query window.
+            range_end: End of the query window.
+
+        Returns:
+            List of ScheduleBlock instances that overlap the range.
+        """
+        stmt = (
+            select(ScheduleBlock)
+            .where(
+                ScheduleBlock.user_id == user_id,
+                ScheduleBlock.start_time < range_end,
+                ScheduleBlock.end_time > range_start,
+            )
+            .order_by(ScheduleBlock.start_time.asc())
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
     async def delete(self, block: ScheduleBlock) -> None:
         """Remove a schedule block from the database.
 

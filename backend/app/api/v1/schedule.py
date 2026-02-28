@@ -45,3 +45,18 @@ async def list_schedule_blocks(
     """Return all schedule blocks for the authenticated user ordered chronologically."""
     service = ScheduleService(db)
     return await service.list_blocks(user_id)
+
+
+@router.delete(
+    "/{block_id}",
+    status_code=204,
+    summary="Delete a schedule block",
+)
+async def delete_schedule_block(
+    block_id: UUID,
+    user_id: UUID = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Remove a schedule block from the user's schedule."""
+    service = ScheduleService(db)
+    await service.delete_block(user_id, block_id)

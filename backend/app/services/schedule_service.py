@@ -56,3 +56,19 @@ class ScheduleService:
         blocks = await self._repo.list_by_user(user_id)
         items = [ScheduleBlockResponse.model_validate(b) for b in blocks]
         return ScheduleBlockListResponse(blocks=items, count=len(items))
+
+    async def delete_block(self, user_id: UUID, block_id: UUID) -> None:
+        """Delete a schedule block owned by the given user.
+
+        Args:
+            user_id: The authenticated user's UUID.
+            block_id: The block to delete.
+
+        Raises:
+            ValueError: If the block does not exist or belongs to another user.
+        """
+        block = await self._repo.get_by_id(block_id)
+        if block is None or block.user_id != user_id:
+            raise ValueError("Block not found")
+        await self._repo.delete(block)
+        logger.info("schedule_block_deleted", block_id=str(block_id), user_id=str(user_id))
