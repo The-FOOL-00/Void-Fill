@@ -68,6 +68,7 @@ async def process_job(job_id_str: str) -> None:
             logger.info("transcription_complete", path=str(audio_path))
 
             # --- Step 3: Intelligence pipeline ---
+            intelligence_ok = False
             try:
                 from app.services.voice_intelligence_service import VoiceIntelligenceService
 
@@ -78,6 +79,7 @@ async def process_job(job_id_str: str) -> None:
                     transcript=transcript,
                 )
                 await session.commit()
+                intelligence_ok = True
             except Exception as e:
                 await session.rollback()
                 logger.error(
@@ -87,27 +89,34 @@ async def process_job(job_id_str: str) -> None:
                 )
 
             # --- Step 4: Autonomous action execution ---
-            try:
-                from app.services.action_service import ActionService
+            if intelligence_ok:
+                try:
+                    from app.services.action_service import ActionService
 
-                action_service = ActionService(session)
-                await action_service.execute_from_intelligence(
-                    job_id=job_id,
-                    user_id=job.user_id,
-                )
-                await session.commit()
-            except Exception as e:
-                await session.rollback()
-                logger.error(
-                    "action_execution_failed",
+                    action_service = ActionService(session)
+                    await action_service.execute_from_intelligence(
+                        job_id=job_id,
+                        user_id=job.user_id,
+                    )
+                    await session.commit()
+                except Exception as e:
+                    await session.rollback()
+                    logger.error(
+                        "action_execution_failed",
+                        job_id=job_id_str,
+                        error=str(e),
+                    )
+            else:
+                logger.warning(
+                    "action_skipped_no_intelligence",
                     job_id=job_id_str,
-                    error=str(e),
                 )
 
             # --- Step 5: Mark completed ---
-            await repo.mark_completed(job_id)
+            final_status = "completed" if intelligence_ok else "partial"
+            await repo.update_status(job_id, final_status)
             await session.commit()
-            logger.info("job_completed", job_id=job_id_str)
+            logger.info("job_completed", job_id=job_id_str, status=final_status)
 
         except Exception as exc:
             await session.rollback()

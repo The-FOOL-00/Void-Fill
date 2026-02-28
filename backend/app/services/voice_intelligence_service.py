@@ -1,12 +1,11 @@
-"""Voice Intelligence Service — intent detection, entity extraction, goal matching.
+"""Voice Intelligence Service — LLM-powered intent detection and entity extraction.
 
-Transforms raw transcripts into structured intelligence records by running
-a deterministic rule-based pipeline:
+Transforms raw transcripts into structured intelligence records by
+calling the LLM intelligence engine:
 
-    transcript → intent detection → entity extraction → goal matching → persist
+    transcript → LLM analysis → goal matching → persist
 """
 
-import re
 from typing import Optional
 from uuid import UUID
 
@@ -17,52 +16,16 @@ from app.models.voice_intelligence import VoiceIntelligence
 from app.repositories.goal_repository import GoalRepository
 from app.repositories.voice_intelligence_repository import VoiceIntelligenceRepository
 from app.services.embedding_service import get_embedding_service
+from app.services.llm_service import get_llm_service
 
 logger = get_logger(__name__)
-
-# ── Intent keyword maps ──────────────────────────────────────────────────
-
-_GOAL_KEYWORDS: tuple[str, ...] = (
-    "study", "build", "learn", "practice", "finish", "complete", "improve",
-    "read", "write", "create", "develop", "master",
-)
-
-_SCHEDULE_KEYWORDS: tuple[str, ...] = (
-    "tomorrow", "today", "tonight", "at ", " pm", " am",
-    "monday", "tuesday", "wednesday", "thursday", "friday",
-    "saturday", "sunday", "morning", "afternoon", "evening",
-    "next week", "o'clock",
-)
-
-_NOTE_KEYWORDS: tuple[str, ...] = (
-    "remember", "note", "don't forget", "remind", "memo",
-)
-
-# ── Filler phrases to strip during entity extraction ─────────────────────
-
-_FILLER_PATTERNS: tuple[str, ...] = (
-    r"^i need to\s+",
-    r"^i want to\s+",
-    r"^i will\s+",
-    r"^i should\s+",
-    r"^i have to\s+",
-    r"^i('d| would) like to\s+",
-    r"^please\s+",
-    r"^can you\s+",
-    r"^could you\s+",
-    r"^let me\s+",
-    r"^help me\s+",
-    r"^i'm going to\s+",
-    r"^i am going to\s+",
-)
 
 
 class VoiceIntelligenceService:
     """Processes transcripts into structured intent + entity records.
 
-    Uses rule-based intent detection and existing semantic search for
-    goal matching.  Designed to be swapped for an LLM-backed parser in
-    a future phase without changing the public API.
+    Uses Gemini for intent detection and entity extraction, with
+    existing semantic search for goal matching.
     """
 
     def __init__(self, session: AsyncSession) -> None:
@@ -79,8 +42,8 @@ class VoiceIntelligenceService:
         """Run the full intelligence pipeline on a transcript.
 
         Steps:
-            1. Detect intent from transcript text.
-            2. Extract cleaned entity text.
+            1. Send transcript to LLM for structured analysis.
+            2. Extract intent, confidence, and entity text.
             3. Attempt semantic goal matching.
             4. Persist a ``VoiceIntelligence`` record.
 
@@ -94,7 +57,21 @@ class VoiceIntelligenceService:
         """
         logger.info("transcript_received", voice_job_id=str(voice_job_id))
 
-        intent, confidence = self._detect_intent(transcript)
+        # ── LLM analysis ─────────────────────────────────────────────
+        llm_service = get_llm_service()
+        llm_result = await llm_service.analyze_transcript(transcript)
+
+        intent = llm_result["intent"]
+        confidence = llm_result["confidence"]
+
+        # Derive the best extracted text from the LLM structured fields
+        extracted_text = (
+            llm_result.get("goal_title")
+            or llm_result.get("note_text")
+            or llm_result.get("schedule_time")
+            or transcript.strip()
+        )
+
         logger.info(
             "intent_detected",
             voice_job_id=str(voice_job_id),
@@ -102,8 +79,7 @@ class VoiceIntelligenceService:
             confidence=confidence,
         )
 
-        extracted_text = self._extract_text(transcript)
-
+        # ── Goal matching ────────────────────────────────────────────
         goal_id = await self._match_goal(user_id, extracted_text)
         if goal_id is not None:
             logger.info(
@@ -112,6 +88,7 @@ class VoiceIntelligenceService:
                 goal_id=str(goal_id),
             )
 
+        # ── Persist ──────────────────────────────────────────────────
         record = VoiceIntelligence(
             voice_job_id=voice_job_id,
             intent=intent,
@@ -123,64 +100,6 @@ class VoiceIntelligenceService:
 
         logger.info("intelligence_saved", voice_job_id=str(voice_job_id))
         return record
-
-    # ------------------------------------------------------------------
-    # Intent detection
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _detect_intent(text: str) -> tuple[str, float]:
-        """Classify the transcript into one of the supported intents.
-
-        Priority order: goal_create > schedule_block > note > unknown.
-        Returns a tuple of ``(intent, confidence)``.
-
-        Args:
-            text: Raw transcript text.
-
-        Returns:
-            A tuple of the intent label and a confidence score [0..1].
-        """
-        lowered = text.lower()
-
-        goal_hits = sum(1 for kw in _GOAL_KEYWORDS if kw in lowered)
-        schedule_hits = sum(1 for kw in _SCHEDULE_KEYWORDS if kw in lowered)
-        note_hits = sum(1 for kw in _NOTE_KEYWORDS if kw in lowered)
-
-        if goal_hits > 0 and goal_hits >= schedule_hits:
-            confidence = min(0.5 + goal_hits * 0.15, 1.0)
-            return "goal_create", round(confidence, 2)
-
-        if schedule_hits > 0:
-            confidence = min(0.5 + schedule_hits * 0.15, 1.0)
-            return "schedule_block", round(confidence, 2)
-
-        if note_hits > 0:
-            confidence = min(0.5 + note_hits * 0.2, 1.0)
-            return "note", round(confidence, 2)
-
-        return "unknown", 0.3
-
-    # ------------------------------------------------------------------
-    # Entity extraction
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _extract_text(text: str) -> str:
-        """Clean a transcript by lowering case and stripping filler phrases.
-
-        Args:
-            text: Raw transcript text.
-
-        Returns:
-            Cleaned, lower-cased text with filler phrases removed.
-        """
-        cleaned = text.lower().strip()
-        for pattern in _FILLER_PATTERNS:
-            cleaned = re.sub(pattern, "", cleaned, count=1)
-        # Collapse whitespace
-        cleaned = re.sub(r"\s+", " ", cleaned).strip()
-        return cleaned
 
     # ------------------------------------------------------------------
     # Goal matching

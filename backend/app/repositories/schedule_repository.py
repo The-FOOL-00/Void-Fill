@@ -76,8 +76,8 @@ class ScheduleRepository:
             select(ScheduleBlock)
             .where(
                 ScheduleBlock.user_id == user_id,
-                ScheduleBlock.start_time >= range_start,
-                ScheduleBlock.end_time <= range_end,
+                ScheduleBlock.start_time < range_end,
+                ScheduleBlock.end_time > range_start,
             )
             .order_by(ScheduleBlock.start_time.asc())
         )

@@ -79,10 +79,13 @@ class ActionService:
 
         if intent == "goal_create":
             action_label = await self._handle_goal_create(user_id, extracted_text)
-        elif intent == "schedule_block":
+        elif intent in ("schedule_block", "schedule_create"):
             action_label = await self._handle_schedule_block(user_id, extracted_text)
-        elif intent == "note":
+        elif intent in ("note", "note_create"):
             action_label = await self._handle_note(user_id, extracted_text, job_id)
+        elif intent == "void_query":
+            logger.info("action_void_query", job_id=str(job_id))
+            action_label = "void_query"
         else:
             logger.info("action_skipped_unknown_intent", job_id=str(job_id), intent=intent)
             action_label = "no_action"

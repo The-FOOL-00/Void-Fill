@@ -73,14 +73,14 @@ class SuggestionRepository:
         Returns:
             List of Suggestion instances ordered by score descending.
         """
+        stmt = select(Suggestion).where(Suggestion.user_id == user_id)
+        if goal_id is not None:
+            stmt = stmt.where(Suggestion.goal_id == goal_id)
         stmt = (
-            select(Suggestion)
-            .where(Suggestion.user_id == user_id)
+            stmt
             .order_by(Suggestion.score.desc(), Suggestion.created_at.desc())
             .limit(limit)
         )
-        if goal_id is not None:
-            stmt = stmt.where(Suggestion.goal_id == goal_id)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 

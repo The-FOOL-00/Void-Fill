@@ -84,6 +84,7 @@ async def get_voice_intelligence(
     return VoiceIntelligenceResponse(
         job_id=record.voice_job_id,
         intent=record.intent,
+        confidence=record.confidence,
         extracted_text=record.extracted_text,
         goal_id=record.goal_id,
         created_at=record.created_at,

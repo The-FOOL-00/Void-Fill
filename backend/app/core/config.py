@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"
 
+    # Gemini
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-pro"
+
+    # LLM Provider
+    llm_provider: str = "gemini"
+
     @property
     def database_url(self) -> str:
         """Construct async PostgreSQL connection string."""

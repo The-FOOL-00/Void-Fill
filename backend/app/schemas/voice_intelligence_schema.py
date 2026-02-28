@@ -12,6 +12,7 @@ class VoiceIntelligenceResponse(BaseModel):
 
     job_id: UUID = Field(..., description="The associated voice job UUID")
     intent: str = Field(..., description="Detected intent category")
+    confidence: float = Field(..., description="Model confidence score (0.0–1.0)")
     extracted_text: str = Field(..., description="Cleaned extracted text from transcript")
     goal_id: Optional[UUID] = Field(
         default=None, description="UUID of the matched goal, if any"
