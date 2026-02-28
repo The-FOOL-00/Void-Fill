@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.services.llm_service import get_llm_service
+from app.services.memory_service import MemoryService
 from app.services.void_service import VoidService
 
 logger = get_logger(__name__)
@@ -22,7 +23,8 @@ You are the VoidFill planner AI.
 
 User has a free time slot.
 
-Void duration: {void_minutes} minutes
+Void duration:
+{void_minutes} minutes
 
 Top suggestion:
 {title}
@@ -30,9 +32,12 @@ Top suggestion:
 Score:
 {score}
 
+User Memory:
+{memory_text}
+
 Write a short recommendation.
 
-Return STRICT JSON only:
+Return STRICT JSON:
 
 {{
   "recommended_goal": "string",
@@ -107,14 +112,23 @@ class PlannerService:
         title = top["title"]
         score = top["score"]
 
-        # Step 8 — Build Prompt
+        # Step 8 — Load Memory Summary
+        memory_service = MemoryService(self._session)
+        memory = await memory_service.get_summary(user_id)
+        logger.info("memory_loaded", user_id=str(user_id))
+
+        # Step 9 — Build Memory Text
+        memory_text = self._build_memory_text(memory)
+
+        # Step 10 — Build Prompt
         prompt = _PLANNER_PROMPT_TEMPLATE.format(
             void_minutes=void_minutes,
             title=title,
             score=score,
+            memory_text=memory_text,
         )
 
-        # Step 9 — Call Gemini (non-blocking)
+        # Step 11 — Call Gemini (non-blocking)
         llm = get_llm_service()
         logger.info("llm_request_started", prompt_length=len(prompt))
 
@@ -126,13 +140,13 @@ class PlannerService:
 
         raw = response.text.strip()
 
-        # Step 10 — Parse JSON
+        # Step 12 — Parse JSON
         data = self._parse_plan_response(raw, title)
 
-        # Step 11 — Logging
+        # Step 13 — Logging
         logger.info("void_plan_generated", user_id=str(user_id))
 
-        # Step 12 — Return Response
+        # Step 14 — Return Response
         return {
             "status": "void",
             "void_minutes": void_minutes,
@@ -145,6 +159,38 @@ class PlannerService:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_memory_text(memory: dict) -> str:
+        """Convert the memory summary dict into a readable text block.
+
+        Limits to top 3 goals and 5 recent actions to avoid
+        oversized prompts.
+        """
+        top_goals = memory.get("top_goals") or []
+        recent_actions = memory.get("recent_actions") or []
+
+        top_goals = top_goals[:3]
+        recent_actions = recent_actions[:5]
+
+        if not top_goals and not recent_actions:
+            return "No memory available."
+
+        lines: list[str] = []
+
+        if top_goals:
+            lines.append("Top Goals:")
+            for g in top_goals:
+                lines.append(f"  {g['title']}")
+                lines.append(f"    Sessions: {g['sessions']}")
+                lines.append(f"    Minutes: {g['total_minutes']}")
+
+        if recent_actions:
+            lines.append("Recent Actions:")
+            for a in recent_actions:
+                lines.append(f"  {a['title']} ({a['minutes']} min)")
+
+        return "\n".join(lines)
 
     @staticmethod
     def _parse_plan_response(raw: str, fallback_title: str) -> dict:
