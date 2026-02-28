@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.schemas.plan_schema import VoidPlanResponse
 from app.schemas.void_schema import VoidNowResponse
+from app.services.planner_service import PlannerService
 from app.services.void_service import VoidService
 
 router = APIRouter(prefix="/void", tags=["void"])
@@ -30,3 +32,21 @@ async def get_void_now(
     """
     service = VoidService(db)
     return await service.get_void_status(user_id)
+
+
+@router.get(
+    "/plan",
+    response_model=VoidPlanResponse,
+    summary="Get AI-powered plan for current void slot",
+)
+async def get_void_plan(
+    user_id: UUID = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Generate a human-level recommendation for the current void slot.
+
+    Uses the deterministic void detection pipeline, then calls Gemini
+    to produce an actionable plan when a void with suggestions exists.
+    """
+    planner = PlannerService(db)
+    return await planner.generate_plan(user_id)
