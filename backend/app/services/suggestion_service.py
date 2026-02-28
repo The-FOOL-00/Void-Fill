@@ -9,6 +9,7 @@ from app.core.logging import get_logger
 from app.models.suggestion import Suggestion
 from app.repositories.goal_repository import GoalRepository
 from app.repositories.suggestion_repository import SuggestionRepository
+from app.services.memory_service import MemoryService
 from app.schemas.suggestion_schema import (
     SuggestionListResponse,
     SuggestionRequest,
@@ -22,6 +23,7 @@ class SuggestionService:
     """Generates and retrieves AI-powered suggestions for a user."""
 
     def __init__(self, session: AsyncSession) -> None:
+        self._session = session
         self._repo = SuggestionRepository(session)
         self._goal_repo = GoalRepository(session)
 
@@ -147,7 +149,23 @@ class SuggestionService:
                 # No estimated_minutes at all — fall back to raw score order
                 fitting = pool[:limit]
 
-        # Step 3 — score each suggestion
+        # Step 3 — load memory summary for adaptive boosting
+        memory_service = MemoryService(self._session)
+        summary = await memory_service.get_summary(user_id)
+
+        # Step 4 — build goal memory map {goal_id: total_minutes, title: total_minutes}
+        goal_minutes_by_id: dict[str, int] = {}
+        goal_minutes_by_title: dict[str, int] = {}
+        for g in summary.get("top_goals") or []:
+            if g.get("goal_id") is not None:
+                goal_minutes_by_id[str(g["goal_id"])] = g["total_minutes"]
+            if g.get("title"):
+                goal_minutes_by_title[g["title"].lower()] = g["total_minutes"]
+
+        all_minutes = list(goal_minutes_by_id.values()) + list(goal_minutes_by_title.values())
+        max_minutes = max(all_minutes, default=0)
+
+        # Step 5 — score each suggestion with memory boost
         scored: list[tuple[float, Suggestion]] = []
         for s in fitting:
             est = s.estimated_minutes if s.estimated_minutes is not None else 0
@@ -159,13 +177,26 @@ class SuggestionService:
             else:
                 duration_fit = 0.0
 
-            final_score = s.score * 0.6 + duration_fit * 0.4
+            # Memory boost: match by goal_id first, then by title substring
+            mem_minutes = 0
+            if s.goal_id is not None and str(s.goal_id) in goal_minutes_by_id:
+                mem_minutes = goal_minutes_by_id[str(s.goal_id)]
+            else:
+                s_text_lower = s.text.lower() if s.text else ""
+                for title, minutes in goal_minutes_by_title.items():
+                    if title in s_text_lower or s_text_lower in title:
+                        mem_minutes = max(mem_minutes, minutes)
+
+            memory_boost = mem_minutes / max_minutes if max_minutes > 0 else 0.0
+
+            final_score = s.score * 0.5 + duration_fit * 0.3 + memory_boost * 0.2
+            final_score = max(0.0, min(1.0, final_score))
             scored.append((final_score, s))
 
-        # Step 4 — sort descending
+        # Step 6 — sort descending
         scored.sort(key=lambda t: t[0], reverse=True)
 
-        # Step 5 — return top N as (final_score, Suggestion) tuples
+        # Step 7 — return top N as (final_score, Suggestion) tuples
         ranked = scored[:limit]
 
         logger.info(
@@ -173,6 +204,12 @@ class SuggestionService:
             user_id=str(user_id),
             void_minutes=void_minutes,
             count=len(ranked),
+        )
+        logger.info(
+            "suggestions_adapted",
+            void_minutes=void_minutes,
+            suggestions=len(ranked),
+            memory_goals=len(goal_minutes_by_id) + len(goal_minutes_by_title),
         )
         return ranked
 
