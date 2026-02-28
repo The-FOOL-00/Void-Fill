@@ -24,12 +24,12 @@ from app.core.logging import get_logger, setup_logging
 from app.core.redis import close_redis, dequeue_voice_job
 from app.repositories.voice_job_repository import VoiceJobRepository
 
+from app.services.transcription_service import TranscriptionService
+
 settings = get_settings()
 logger = get_logger(__name__)
 
-MOCK_TRANSCRIPT: str = (
-    "I need to study calculus tonight. "
-)
+_transcription_service = TranscriptionService()
 
 
 async def process_job(job_id_str: str) -> None:
@@ -59,8 +59,8 @@ async def process_job(job_id_str: str) -> None:
             if not audio_path.exists():
                 raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
-            # --- Step 1: Transcription (mock Whisper) ---
-            transcript = await transcribe_audio(audio_path)
+            # --- Step 1: Transcription (Faster-Whisper) ---
+            transcript = await _transcription_service.transcribe_file(str(audio_path))
 
             # --- Step 2: Store transcript ---
             await repo.update_transcript(job_id, transcript)
@@ -116,24 +116,6 @@ async def process_job(job_id_str: str) -> None:
                 await err_repo.update_error(job_id, str(exc))
                 await err_session.commit()
             logger.error("job_failed", job_id=job_id_str, error=str(exc))
-
-
-async def transcribe_audio(audio_path: Path) -> str:
-    """Transcribe an audio file to text.
-
-    Currently returns a deterministic mock transcript.
-    Will be replaced by Whisper / faster-whisper integration.
-
-    Args:
-        audio_path: Path to the audio file on disk.
-
-    Returns:
-        The transcribed text.
-    """
-    # Simulate processing latency
-    await asyncio.sleep(1)
-    logger.info("transcription_complete", path=str(audio_path))
-    return MOCK_TRANSCRIPT
 
 
 async def worker_loop() -> None:

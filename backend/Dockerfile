@@ -1,27 +1,30 @@
 FROM python:3.11-slim
 
-# Prevent bytecode and enable unbuffered stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# System dependencies required by psycopg2-binary and pgvector
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         gcc \
         libpq-dev \
+        ffmpeg \
+        binutils \
+        patchelf \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies first for Docker layer caching
 COPY requirements.txt .
+
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy application source
+# Fix Faster-Whisper executable stack issue
+RUN find /usr/local -name "libctranslate2*.so*" \
+    -exec patchelf --clear-execstack {} \; || true
+
 COPY . .
 
-# Create audio storage directory
 RUN mkdir -p /app/audio
 
 EXPOSE 8000
