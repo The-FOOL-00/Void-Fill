@@ -84,6 +84,98 @@ class SuggestionService:
         items = [SuggestionResponse.model_validate(s) for s in suggestions]
         return SuggestionListResponse(suggestions=items, count=len(items))
 
+    async def get_ranked_suggestions(
+        self,
+        user_id: UUID,
+        void_minutes: int,
+        limit: int = 5,
+    ) -> list[Suggestion]:
+        """Return suggestions ranked by goal-aware scoring.
+
+        Steps:
+        1. Load a broad pool of suggestions from the database.
+        2. Filter to those whose ``estimated_minutes`` fits the void.
+        3. Score each suggestion with a weighted formula.
+        4. Sort descending by final score and return top *limit*.
+
+        If no suggestions fit the void duration, the shortest ones are
+        returned so the list is never empty.
+
+        Args:
+            user_id: The authenticated user's UUID.
+            void_minutes: Available free time in minutes.
+            limit: Maximum suggestions to return (default 5).
+
+        Returns:
+            List of ``(final_score, Suggestion)`` tuples, sorted descending.
+        """
+        # Guard: zero or negative void → nothing useful to suggest
+        if void_minutes <= 0:
+            logger.info(
+                "suggestions_ranked",
+                user_id=str(user_id),
+                void_minutes=void_minutes,
+                count=0,
+            )
+            return []
+
+        # Step 1 — load broad pool
+        pool = await self._repo.list_by_user(user_id=user_id, limit=50)
+
+        if not pool:
+            logger.info(
+                "suggestions_ranked",
+                user_id=str(user_id),
+                void_minutes=void_minutes,
+                count=0,
+            )
+            return []
+
+        # Step 2 — filter by duration
+        fitting = [
+            s for s in pool
+            if s.estimated_minutes is not None and s.estimated_minutes <= void_minutes
+        ]
+
+        # Fallback: if nothing fits, return the shortest suggestions
+        if not fitting:
+            pool_with_est = [s for s in pool if s.estimated_minutes is not None]
+            if pool_with_est:
+                pool_with_est.sort(key=lambda s: s.estimated_minutes)  # type: ignore[arg-type]
+                fitting = pool_with_est[:limit]
+            else:
+                # No estimated_minutes at all — fall back to raw score order
+                fitting = pool[:limit]
+
+        # Step 3 — score each suggestion
+        scored: list[tuple[float, Suggestion]] = []
+        for s in fitting:
+            est = s.estimated_minutes if s.estimated_minutes is not None else 0
+            if void_minutes > 0 and est > 0:
+                duration_fit = max(
+                    0.0,
+                    min(1.0, 1 - abs(void_minutes - est) / void_minutes),
+                )
+            else:
+                duration_fit = 0.0
+
+            final_score = s.score * 0.6 + duration_fit * 0.4
+            scored.append((final_score, s))
+
+        # Step 4 — sort descending
+        scored.sort(key=lambda t: t[0], reverse=True)
+
+        # Step 5 — return top N as (final_score, Suggestion) tuples
+        ranked = scored[:limit]
+
+        logger.info(
+            "suggestions_ranked",
+            user_id=str(user_id),
+            void_minutes=void_minutes,
+            count=len(ranked),
+        )
+        return ranked
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -111,14 +203,17 @@ class SuggestionService:
         suggestions: list[Suggestion] = []
         context = f" for goal '{goal_title}'" if goal_title else ""
 
+        durations = [15, 30, 45, 60, 90]
         for idx in range(limit):
             score = round(1.0 - (idx * 0.1), 2)
+            est = durations[idx % len(durations)]
             suggestions.append(
                 Suggestion(
                     user_id=user_id,
                     goal_id=goal_id,
                     text=f"Suggestion {idx + 1}{context}: optimise your next void slot",
                     score=max(score, 0.1),
+                    estimated_minutes=est,
                     accepted=False,
                 )
             )

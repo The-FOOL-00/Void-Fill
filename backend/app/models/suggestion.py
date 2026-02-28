@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,6 +27,9 @@ class Suggestion(Base):
     )
     text: Mapped[str] = mapped_column(String(1024), nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    estimated_minutes: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, default=None
+    )
     accepted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

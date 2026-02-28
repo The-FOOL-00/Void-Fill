@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.logging import get_logger
 from app.repositories.schedule_repository import ScheduleRepository
 from app.repositories.suggestion_repository import SuggestionRepository
+from app.services.suggestion_service import SuggestionService
 
 logger = get_logger(__name__)
 
@@ -30,6 +31,7 @@ class VoidService:
     def __init__(self, session: AsyncSession) -> None:
         self._schedule_repo = ScheduleRepository(session)
         self._suggestion_repo = SuggestionRepository(session)
+        self._suggestion_service = SuggestionService(session)
 
     # ------------------------------------------------------------------
     # Public API
@@ -102,17 +104,18 @@ class VoidService:
             duration_minutes=duration_minutes,
         )
 
-        # Step 6 — load suggestions (empty list if none exist, never null)
-        raw_suggestions = await self._suggestion_repo.list_by_user(
-            user_id=user_id, limit=5
+        # Step 6 — load ranked suggestions (empty list if none exist, never null)
+        ranked_pairs = await self._suggestion_service.get_ranked_suggestions(
+            user_id=user_id,
+            void_minutes=duration_minutes,
         )
         suggestion_dicts = [
             {
                 "goal_id": str(s.goal_id) if s.goal_id else None,
                 "title": s.text,
-                "score": round(s.score, 2),
+                "score": round(final_score, 2),
             }
-            for s in raw_suggestions
+            for final_score, s in ranked_pairs
         ]
 
         # Step 7 — return plain dict (no ORM objects)

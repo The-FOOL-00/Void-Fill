@@ -58,6 +58,12 @@ async def init_db() -> None:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
 
+        # Phase 9 — add estimated_minutes column if it doesn't exist yet
+        await conn.execute(text(
+            "ALTER TABLE suggestions "
+            "ADD COLUMN IF NOT EXISTS estimated_minutes INTEGER"
+        ))
+
 
 async def close_db() -> None:
     """Dispose of the connection pool during shutdown."""

@@ -30,6 +30,7 @@ class SuggestionResponse(BaseModel):
     goal_id: Optional[UUID]
     text: str
     score: float
+    estimated_minutes: Optional[int] = None
     accepted: bool
     created_at: datetime
 
