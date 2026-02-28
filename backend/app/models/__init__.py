@@ -12,9 +12,11 @@ from app.models.user import User
 from app.models.voice_intelligence import VoiceIntelligence
 from app.models.voice_job import VoiceJob
 from app.models.voice_log import VoiceLog
+from app.models.memory import Memory
 
 __all__ = [
     "Goal",
+    "Memory",
     "Note",
     "ScheduleBlock",
     "Suggestion",
