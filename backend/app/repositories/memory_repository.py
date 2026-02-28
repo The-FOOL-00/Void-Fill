@@ -116,3 +116,96 @@ class MemoryRepository:
             }
             for row in rows
         ]
+
+    async def list_habit_stats(
+        self,
+        user_id: UUID,
+        limit: int = 10,
+    ) -> list[dict]:
+        """Return goal-level aggregates for habit detection.
+
+        Groups by title and orders by total_minutes DESC.
+
+        Args:
+            user_id: Owner of the memories.
+            limit: Maximum number of results.
+
+        Returns:
+            List of dicts with title, sessions, total_minutes.
+        """
+        stmt = (
+            select(
+                Memory.title,
+                func.count().label("sessions"),
+                func.sum(Memory.minutes).label("total_minutes"),
+            )
+            .where(Memory.user_id == user_id)
+            .group_by(Memory.title)
+            .order_by(func.sum(Memory.minutes).desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        rows = result.all()
+        return [
+            {
+                "title": row.title,
+                "sessions": row.sessions,
+                "total_minutes": row.total_minutes,
+            }
+            for row in rows
+        ]
+
+    async def list_time_patterns(
+        self,
+        user_id: UUID,
+        limit: int = 8,
+    ) -> list[dict]:
+        """Return hour-of-day session counts for time-pattern detection.
+
+        Args:
+            user_id: Owner of the memories.
+            limit: Maximum number of hour buckets.
+
+        Returns:
+            List of dicts with hour and sessions, ordered by sessions DESC.
+        """
+        hour_col = func.extract("hour", Memory.created_at).label("hour")
+        stmt = (
+            select(
+                hour_col,
+                func.count().label("sessions"),
+            )
+            .where(Memory.user_id == user_id)
+            .group_by(hour_col)
+            .order_by(func.count().desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        rows = result.all()
+        return [
+            {
+                "hour": int(row.hour),
+                "sessions": row.sessions,
+            }
+            for row in rows
+        ]
+
+    async def average_session_minutes(
+        self,
+        user_id: UUID,
+    ) -> int:
+        """Return the average session duration in minutes.
+
+        Args:
+            user_id: Owner of the memories.
+
+        Returns:
+            Integer average, or 0 if no memories exist.
+        """
+        stmt = (
+            select(func.avg(Memory.minutes))
+            .where(Memory.user_id == user_id)
+        )
+        result = await self._session.execute(stmt)
+        avg = result.scalar()
+        return int(avg) if avg is not None else 0
