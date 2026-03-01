@@ -64,7 +64,9 @@ function categorizeGoal(goal: Goal): CategoryKey {
   for (const cat of CATEGORIES) {
     if (cat.keywords.some((kw) => text.includes(kw))) return cat.key
   }
-  return CATEGORIES[goal.priority % CATEGORIES.length].key
+  // priority is a 0–1 float; map to a valid integer index
+  const idx = Math.floor(goal.priority * CATEGORIES.length) % CATEGORIES.length
+  return CATEGORIES[idx >= 0 && idx < CATEGORIES.length ? idx : 0].key
 }
 
 function timeAgo(iso: string): string {
@@ -392,8 +394,9 @@ function GoalCard({
   const { color, label, Icon } = category
   const latest = goals.slice(0, 3)
   const realGoals = goals.filter((g): g is Goal => !isPlaceholder(g))
-  const lastUpdated = realGoals.length > 0
-    ? realGoals.reduce((a, b) => a.updated_at > b.updated_at ? a : b).updated_at
+  const goalsWithDates = realGoals.filter((g) => g.updated_at || g.created_at)
+  const lastUpdated = goalsWithDates.length > 0
+    ? goalsWithDates.reduce((a, b) => (a.updated_at ?? a.created_at) > (b.updated_at ?? b.created_at) ? a : b).updated_at ?? goalsWithDates[0].created_at
     : null
 
   return (

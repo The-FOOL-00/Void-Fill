@@ -5,8 +5,8 @@
   align-items: center;
   justify-content: center;
   padding: 2rem 1.5rem;
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .logo {
@@ -14,12 +14,12 @@
   font-weight: 700;
   letter-spacing: -1px;
   margin-bottom: 0.5rem;
-  color: #fff;
+  color: var(--color-text);
 }
 
 .tagline {
-  font-size: 0.875rem;
-  color: #666;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
   margin-bottom: 2.5rem;
   text-align: center;
 }
@@ -27,9 +27,9 @@
 .card {
   width: 100%;
   max-width: 360px;
-  background: #141414;
-  border: 1px solid #222;
-  border-radius: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
   padding: 2rem;
 }
 
@@ -37,7 +37,7 @@
   display: flex;
   gap: 0;
   margin-bottom: 1.5rem;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .tab {
@@ -45,18 +45,18 @@
   padding: 0.625rem 0;
   background: none;
   border: none;
-  color: #555;
-  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
   font-weight: 500;
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .tab.active {
-  color: #fff;
-  border-bottom-color: #7c3aed;
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
 }
 
 .form {
@@ -73,56 +73,61 @@
 
 .label {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--color-text-sec);
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .input {
   padding: 0.75rem 1rem;
-  background: #1e1e1e;
-  border: 1px solid #2a2a2a;
-  border-radius: 10px;
-  color: #fff;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
   font-size: 1rem;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--transition-fast);
 }
 
 .input:focus {
-  border-color: #7c3aed;
+  border-color: var(--color-accent);
 }
 
 .submit {
   margin-top: 0.5rem;
   padding: 0.875rem;
-  background: #7c3aed;
+  background: var(--color-accent);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   color: #fff;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  box-shadow: 0 4px 20px rgba(237, 28, 36, 0.3);
 }
 
 .submit:hover {
-  background: #6d28d9;
+  opacity: 0.9;
+}
+
+.submit:active {
+  transform: scale(0.98);
 }
 
 .submit:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .error {
   padding: 0.75rem 1rem;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 8px;
+  background: rgba(237, 28, 36, 0.08);
+  border: 1px solid rgba(237, 28, 36, 0.2);
+  border-radius: var(--radius-sm);
   color: #f87171;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   text-align: center;
 }
 
@@ -131,7 +136,7 @@
   align-items: center;
   gap: 0.75rem;
   margin: 0.5rem 0;
-  color: #444;
+  color: var(--color-text-muted);
   font-size: 0.8rem;
 }
 
@@ -140,25 +145,27 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: #222;
+  background: var(--color-border);
 }
 
 .skip {
   margin-top: 1.5rem;
   font-size: 0.8rem;
-  color: #444;
+  color: var(--color-text-muted);
   text-align: center;
 }
 
 .skipLink {
-  color: #666;
+  color: var(--color-text-sec);
   cursor: pointer;
   text-decoration: underline;
+  text-underline-offset: 2px;
   background: none;
   border: none;
   font-size: inherit;
+  transition: color var(--transition-fast);
 }
 
 .skipLink:hover {
-  color: #999;
+  color: var(--color-text);
 }

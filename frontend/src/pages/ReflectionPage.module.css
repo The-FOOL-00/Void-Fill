@@ -1,4 +1,4 @@
-/* ── Page ─────────────────────────────────────────────────────────────────── */
+/* -- Page ------------------------------------------------------------------- */
 .page {
   display: flex;
   flex-direction: column;
@@ -8,20 +8,20 @@
   gap: 14px;
 }
 
-/* ── Skeleton shimmer ─────────────────────────────────────────────────────── */
+/* -- Skeleton shimmer ------------------------------------------------------- */
 @keyframes shimmer {
   0%   { background-position: -400px 0; }
   100% { background-position:  400px 0; }
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-2) 50%, var(--color-surface) 75%);
   background-size: 800px 100%;
   animation: shimmer 1.4s infinite linear;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
+/* -- Header ---------------------------------------------------------------- */
 .header {
   margin-bottom: 6px;
 }
@@ -37,7 +37,7 @@
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--color-text);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   line-height: 1.1;
 }
 
@@ -46,7 +46,7 @@
   color: var(--color-text-muted);
 }
 
-/* ── Empty State ─────────────────────────────────────────────────────────── */
+/* -- Empty State ----------------------------------------------------------- */
 .emptyState {
   flex: 1;
   display: flex;
@@ -59,7 +59,7 @@
 }
 
 .emptyIcon {
-  opacity: 0.4;
+  opacity: 0.35;
   margin-bottom: 8px;
 }
 
@@ -89,20 +89,21 @@
   font-weight: 700;
   font-family: var(--font-family);
   cursor: pointer;
-  transition: opacity var(--transition-fast);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  box-shadow: 0 4px 20px rgba(237, 28, 36, 0.3);
 }
-.emptyBtn:active { opacity: 0.8; }
+.emptyBtn:active { opacity: 0.8; transform: scale(0.98); }
 
-/* ── "This Week in Review" Card ──────────────────────────────────────────── */
+/* -- "This Week in Review" Card -------------------------------------------- */
 .reviewCard {
-  background-color: #111111;
-  border-radius: 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
   padding: 20px 20px 22px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  outline: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .reviewLabel {
@@ -114,7 +115,7 @@
   align-self: center;
 }
 
-/* ── Waveform ─────────────────────────────────────────────────────────────── */
+/* -- Waveform --------------------------------------------------------------- */
 @keyframes waveBar {
   0%, 100% { height: 6px; }
   50%       { height: 40px; }
@@ -132,7 +133,7 @@
 .bar {
   width: 4px;
   height: 6px;
-  background-color: #ED1C24;
+  background-color: var(--color-accent);
   border-radius: 3px;
   transition: height 0.2s ease;
 }
@@ -142,13 +143,13 @@
   animation-delay: var(--bar-delay, 0s);
 }
 
-/* ── Play/Pause button ────────────────────────────────────────────────────── */
+/* -- Play/Pause button ------------------------------------------------------ */
 .playBtn {
   width: 56px;
   height: 56px;
   border-radius: 50%;
   background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -158,11 +159,11 @@
 }
 
 .playBtn:active {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .playBtnActive {
-  border-color: #ED1C24;
+  border-color: var(--color-accent);
 }
 
 .summaryLabel {
@@ -170,10 +171,11 @@
   color: var(--color-text-muted);
 }
 
-/* ── Stats card ───────────────────────────────────────────────────────────── */
+/* -- Stats card ------------------------------------------------------------- */
 .statsCard {
-  background-color: #111111;
-  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -188,7 +190,7 @@
 }
 
 .statRowBorder {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .statDot {
@@ -216,11 +218,11 @@
   color: #FF4444;
 }
 
-/* ── Priority insight card ────────────────────────────────────────────────── */
+/* -- Priority insight card -------------------------------------------------- */
 .insightCard {
-  background: #1a1a1a;
-  border: 1px solid #333333;
-  border-radius: 16px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: 16px;
   display: flex;
   gap: 14px;
@@ -250,7 +252,7 @@
   line-height: 1.5;
 }
 
-/* ── Update Goals button ──────────────────────────────────────────────────── */
+/* -- Update Goals button ---------------------------------------------------- */
 .updateGoalsWrapper {
   display: flex;
   flex-direction: column;
@@ -264,17 +266,18 @@
   background: var(--color-accent);
   color: #ffffff;
   border: none;
-  border-radius: 14px;
-  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  padding: 15px 20px;
   font-size: 1rem;
   font-weight: 700;
   font-family: var(--font-family);
   cursor: pointer;
   transition: opacity var(--transition-fast), transform var(--transition-fast);
+  box-shadow: 0 4px 20px rgba(237, 28, 36, 0.3);
 }
 
 .updateGoalsBtn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: default;
 }
 
@@ -298,4 +301,3 @@
   color: var(--color-text-muted);
   min-height: 16px;
 }
-

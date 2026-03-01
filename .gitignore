@@ -45,3 +45,5 @@ frontend/dist/
 frontend/.vite/
 frontend/dist-ssr/
 *.local
+# Playwright MCP screenshots
+.playwright-mcp/

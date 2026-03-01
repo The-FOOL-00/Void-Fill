@@ -151,7 +151,7 @@ export default function NotesPage() {
                   <div className={styles.noteAccentBar} />
                   <div className={styles.noteContent}>
                     <p className={styles.noteText}>
-                      {isOpen ? (note.content || '') : excerpt(note.content || '')}
+                      {isOpen ? (note.text || '') : excerpt(note.text || '')}
                     </p>
                     <span className={styles.noteTime}>{relativeTime(note.created_at)}</span>
                   </div>

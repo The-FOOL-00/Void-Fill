@@ -1,13 +1,13 @@
-/* ── SuggestionOverlay ─────────────────────────────────────────────────────── */
+/* -- SuggestionOverlay ------------------------------------------------------- */
 
-/* Backdrop — full-screen with blur */
+/* Backdrop � full-screen with blur */
 .backdrop {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -19,15 +19,17 @@
   opacity: 1;
 }
 
-/* Sheet — slide up from bottom */
+/* Sheet � slide up from bottom */
 .sheet {
   width: 100%;
   max-width: 480px;
-  background: var(--color-surface, #111);
-  border-radius: 20px 20px 0 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
   padding: 28px 20px 24px;
   transform: translateY(100%);
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform var(--transition-spring);
 }
 
 .sheetVisible {
@@ -36,15 +38,15 @@
 
 /* Header */
 .heading {
-  font-size: var(--font-size-lg, 1.25rem);
+  font-size: var(--font-size-lg);
   font-weight: 700;
-  color: var(--color-text, #fff);
+  color: var(--color-text);
   margin: 0 0 8px;
 }
 
 .transcript {
-  font-size: var(--font-size-sm, 0.875rem);
-  color: var(--color-text-muted, #777);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
   font-style: italic;
   margin: 0 0 20px;
   line-height: 1.4;
@@ -54,7 +56,7 @@
 .cardList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 24px;
 }
 
@@ -62,8 +64,8 @@
 .card {
   display: flex;
   align-items: stretch;
-  background: #1a1a1a;
-  border-radius: var(--radius-lg, 16px);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-lg);
   border: 2px solid transparent;
   overflow: hidden;
   cursor: pointer;
@@ -71,60 +73,60 @@
   text-align: left;
   width: 100%;
   transition:
-    border-color 0.2s ease,
-    opacity 0.2s ease;
+    border-color var(--transition-fast),
+    opacity var(--transition-fast);
 }
 
 .card:hover {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: var(--color-border-hover);
 }
 
 .cardSelected {
-  border-color: var(--color-accent, #ED1C24) !important;
+  border-color: var(--color-accent) !important;
 }
 
 .cardFaded {
-  opacity: 0.4;
+  opacity: 0.35;
 }
 
 /* Left accent bar */
 .cardAccent {
-  width: 4px;
+  width: 3px;
   background-color: var(--accent);
   flex-shrink: 0;
 }
 
 .cardBody {
-  padding: 14px 16px;
+  padding: 12px 16px;
   flex: 1;
   min-width: 0;
 }
 
 .cardTitle {
-  font-size: var(--font-size-base, 1rem);
+  font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--color-text, #fff);
-  margin: 0 0 4px;
+  color: var(--color-text);
+  margin: 0 0 3px;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 .check {
-  color: var(--color-accent, #ED1C24);
+  color: var(--color-accent);
   font-weight: 700;
 }
 
 .cardReason {
-  font-size: var(--font-size-sm, 0.875rem);
-  color: var(--color-text-muted, #888);
-  margin: 0 0 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0 0 3px;
   line-height: 1.4;
 }
 
 .cardScore {
-  font-size: var(--font-size-xs, 0.75rem);
-  color: var(--color-text-muted, #666);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
   margin: 0;
 }
 
@@ -139,15 +141,16 @@
 .acceptBtn {
   width: 100%;
   padding: 14px;
-  background: var(--color-accent, #ED1C24);
+  background: var(--color-accent);
   color: #fff;
   border: none;
-  border-radius: var(--radius-md, 12px);
-  font-family: var(--font-family, 'Poppins', sans-serif);
-  font-size: var(--font-size-base, 1rem);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  box-shadow: 0 4px 20px rgba(237, 28, 36, 0.3);
 }
 
 .acceptBtn:disabled {
@@ -156,19 +159,24 @@
 }
 
 .acceptBtn:not(:disabled):hover {
-  opacity: 0.85;
+  opacity: 0.9;
+}
+
+.acceptBtn:not(:disabled):active {
+  transform: scale(0.98);
 }
 
 .skipBtn {
   background: none;
   border: none;
-  color: var(--color-text-muted, #888);
-  font-family: var(--font-family, 'Poppins', sans-serif);
-  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
   cursor: pointer;
   padding: 4px 8px;
+  transition: color var(--transition-fast);
 }
 
 .skipBtn:hover {
-  color: var(--color-text, #fff);
+  color: var(--color-text);
 }

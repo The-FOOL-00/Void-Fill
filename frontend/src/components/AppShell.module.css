@@ -6,51 +6,83 @@
   max-width: 480px;
   margin: 0 auto;
   position: relative;
+  width: 100%;
 }
 
 .main {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* ── Bottom Navigation ── */
+/* -- Bottom Navigation (Glass Effect) -- */
 .nav {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  background-color: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  padding: var(--space-2) 0;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-top: 1px solid var(--glass-border);
+  padding: 8px 4px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
   flex-shrink: 0;
+  position: relative;
+  z-index: 50;
 }
 
 .navItem {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-md);
+  gap: 3px;
+  padding: 6px 16px;
+  border-radius: var(--radius-lg);
   text-decoration: none;
-  transition: opacity var(--transition-fast);
+  transition: background var(--transition-fast), opacity var(--transition-fast);
+  position: relative;
+  min-width: 52px;
 }
 
-.navItem:hover { opacity: 0.75; }
-.navItemActive { /* active state handled by SVG icon color */ }
+.navItem:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
 
-/* icon styling handled by SVG stroke/fill directly */
+.navItem:active {
+  transform: scale(0.95);
+}
 
-/* ── Offline Banner ── */
+.navItemActive {
+  background: rgba(237, 28, 36, 0.08);
+}
+
+/* Active indicator dot */
+.navItemActive::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* -- Offline Banner -- */
 .offlineBanner {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 9998;
-  background: #1a1a1a;
-  color: #888888;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--color-text-sec);
   font-size: 13px;
   padding: 8px 16px;
   text-align: center;
   pointer-events: none;
+  border-bottom: 1px solid var(--glass-border);
 }
