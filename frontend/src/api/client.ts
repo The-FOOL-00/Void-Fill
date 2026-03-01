@@ -1,10 +1,11 @@
 /**
  * Central API client for VoidFill backend.
- * All calls go through /api/v1 — proxied to localhost:8000 by Vite.
+ * All calls route through the /api/v1 prefix.
+ * In dev, Vite proxies /api → backend. In prod, nginx handles it.
  * Auth is stubbed on the backend (returns DEMO_USER_ID), so no headers needed.
  */
 
-const BASE = '/api/v1';
+const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api/v1';
 
 async function http<T>(
   path: string,
@@ -121,30 +122,16 @@ export const api = {
       }),
 
     /**
-     * Accept a suggestion. Backend endpoint does NOT exist yet —
-     * logs to console and returns a stub response.
+     * Accept a suggestion (stub — backend endpoint not yet implemented).
      */
-    accept: async (suggestionId: string): Promise<import('@/types/api').SuggestionAcceptResponse> => {
-      console.warn('[suggestions.accept] stub — backend endpoint not implemented', { suggestionId });
-      // TODO: uncomment when POST /suggestions/accept exists
-      // return http<import('@/types/api').SuggestionAcceptResponse>('/suggestions/accept', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ suggestion_id: suggestionId }),
-      // });
+    accept: async (_suggestionId: string): Promise<import('@/types/api').SuggestionAcceptResponse> => {
       return { status: 'accepted' };
     },
 
     /**
-     * Skip multiple suggestions. Backend endpoint does NOT exist yet —
-     * logs to console and returns a stub response.
+     * Skip suggestions (stub — backend endpoint not yet implemented).
      */
-    skip: async (suggestionIds: string[]): Promise<import('@/types/api').SuggestionSkipResponse> => {
-      console.warn('[suggestions.skip] stub — backend endpoint not implemented', { suggestionIds });
-      // TODO: uncomment when POST /suggestions/skip exists
-      // return http<import('@/types/api').SuggestionSkipResponse>('/suggestions/skip', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ suggestion_ids: suggestionIds }),
-      // });
+    skip: async (_suggestionIds: string[]): Promise<import('@/types/api').SuggestionSkipResponse> => {
       return { status: 'skipped' };
     },
   },

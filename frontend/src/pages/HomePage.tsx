@@ -13,13 +13,6 @@ function getGreeting(): string {
   return 'Good evening'
 }
 
-function getTimeOfDay(): string {
-  const h = new Date().getHours()
-  if (h < 12) return 'morning'
-  if (h < 17) return 'afternoon'
-  return 'evening'
-}
-
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
@@ -219,11 +212,9 @@ export default function HomePage() {
           }, 1500)
         })
 
-        // Get void duration
+        // Refresh void status
         const voidData = await api.void.now().catch(() => voidNow)
         if (voidData) setVoidNow(voidData)
-
-        const voidDuration = voidData?.void_slot?.duration_minutes ?? 0
 
         // Request suggestions with transcript context
         const { suggestions: items } = await api.suggestions.request({
@@ -237,13 +228,6 @@ export default function HomePage() {
         setOverlayTranscript(transcript)
         setOverlayOpen(true)
         setMicPhase('done')
-
-        // Log context for debugging
-        console.info('[HomePage] suggestions requested', {
-          transcript,
-          void_duration: voidDuration,
-          time_of_day: getTimeOfDay(),
-        })
       } catch (err) {
         console.error('[HomePage] voice flow error:', err)
         setMicPhase('idle')
