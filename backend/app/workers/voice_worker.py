@@ -22,6 +22,8 @@ from app.core.config import get_settings
 from app.core.database import async_session_factory, init_db
 from app.core.logging import get_logger, setup_logging
 from app.core.redis import close_redis, dequeue_voice_job
+from app.models.note import Note
+from app.repositories.note_repository import NoteRepository
 from app.repositories.voice_job_repository import VoiceJobRepository
 
 from app.services.transcription_service import TranscriptionService
@@ -62,8 +64,12 @@ async def process_job(job_id_str: str) -> None:
             # --- Step 1: Transcription (Faster-Whisper) ---
             transcript = await _transcription_service.transcribe_file(str(audio_path))
 
-            # --- Step 2: Store transcript ---
+            # --- Step 2: Store transcript + create Note ---
             await repo.update_transcript(job_id, transcript)
+            note_repo = NoteRepository(session)
+            await note_repo.create_note(
+                Note(user_id=job.user_id, text=transcript, voice_job_id=job_id)
+            )
             await session.commit()
             logger.info("transcription_complete", path=str(audio_path))
 
