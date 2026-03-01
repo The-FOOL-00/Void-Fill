@@ -1,8 +1,11 @@
 """VoidFill — FastAPI application entry point."""
 
+import os
+import time
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,6 +21,18 @@ from app.core.exceptions import (
     VoidFillError,
 )
 from app.core.logging import get_logger, setup_logging
+
+# ---------------------------------------------------------------------------
+# Sentry — initialise before anything else; no-op when DSN is empty
+# ---------------------------------------------------------------------------
+
+_sentry_dsn = os.getenv("SENTRY_DSN", "")
+if _sentry_dsn:
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        traces_sample_rate=0.1,
+        environment=os.getenv("ENVIRONMENT", "development"),
+    )
 
 settings = get_settings()
 logger = get_logger(__name__)
@@ -81,6 +96,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Request logging middleware
+# ---------------------------------------------------------------------------
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log every HTTP request with method, path, status, duration, and user-agent.
+
+    Streams to stdout as structured JSON in production (Railway log viewer)
+    and coloured console output in development.
+    """
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = round((time.perf_counter() - start) * 1000, 2)
+
+    # Skip noisy health-check polling from Railway
+    if request.url.path != "/health":
+        logger.info(
+            "http_request",
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+            user_agent=request.headers.get("user-agent", ""),
+        )
+
+    return response
 
 
 # ---------------------------------------------------------------------------

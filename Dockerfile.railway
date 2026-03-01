@@ -1,0 +1,75 @@
+# ── Stage 1: Build React frontend ────────────────────────────────────────────
+FROM node:18-alpine AS frontend
+
+WORKDIR /app/frontend
+
+# Install deps first (cache layer)
+COPY frontend/package*.json ./
+RUN npm ci
+
+# Copy source and build
+COPY frontend/ ./
+RUN npm run build
+# Output: /app/frontend/dist
+
+
+# ── Stage 2: Backend runtime + nginx reverse proxy ───────────────────────────
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# System dependencies:
+#   gcc / libpq-dev  — PostgreSQL client + asyncpg C extension
+#   ffmpeg           — audio processing for faster-whisper
+#   binutils/patchelf — fix ctranslate2 executable stack
+#   nginx            — serves React SPA + proxies /api to uvicorn
+#   supervisor       — process manager (nginx + uvicorn + voice worker)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc \
+        libpq-dev \
+        postgresql-client \
+        ffmpeg \
+        binutils \
+        patchelf \
+        nginx \
+        supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Fix Faster-Whisper / ctranslate2 executable-stack issue on Linux
+RUN find /usr/local -name "libctranslate2*.so*" \
+    -exec patchelf --clear-execstack {} \; 2>/dev/null || true
+
+# Backend source
+COPY backend/ ./backend/
+
+# Built React frontend from Stage 1
+COPY --from=frontend /app/frontend/dist ./frontend/dist
+
+# Persistent audio storage directory
+RUN mkdir -p /app/audio
+
+# Nginx config (removes default site first)
+COPY docker/nginx.railway.conf /etc/nginx/conf.d/default.conf
+RUN rm -f /etc/nginx/sites-enabled/default
+
+# Backup script (used by Railway cron service — see scripts/db_backup.sh)
+COPY scripts/db_backup.sh /app/scripts/db_backup.sh
+RUN chmod +x /app/scripts/db_backup.sh
+
+# Supervisord config
+COPY docker/supervisord.railway.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Railway routes external traffic to port 80 via its edge
+EXPOSE 80
+
+# supervisord manages: nginx (port 80) + uvicorn (port 8000, internal) + voice worker
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

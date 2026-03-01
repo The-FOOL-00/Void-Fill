@@ -1,0 +1,274 @@
+/* ── Page Shell ─────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100dvh;
+  background-color: var(--color-bg);
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Skip button ─────────────────────────────────────────────────────────── */
+.skipBtn {
+  position: absolute;
+  top: 54px;
+  right: 24px;
+  background: transparent;
+  border: none;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  z-index: 10;
+  transition: color var(--transition-fast);
+}
+
+.skipBtn:hover {
+  color: var(--color-text-sec);
+}
+
+/* ── Progress Dots (top) ─────────────────────────────────────────────────── */
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: calc(100% - 48px);
+  margin: 56px 24px 0;
+  height: 4px;
+}
+
+.progressDot {
+  height: 4px;
+  border-radius: 999px;
+  transition:
+    flex var(--transition-base),
+    background-color var(--transition-base),
+    width var(--transition-base);
+}
+
+/* Active step = expanded white pill */
+.progressDotActive {
+  flex: 3;
+  background-color: #ffffff;
+}
+
+/* Completed step = small white dot */
+.progressDotDone {
+  width: 8px;
+  flex: none;
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+}
+
+/* Future step = small grey dot */
+.progressDotFuture {
+  width: 8px;
+  flex: none;
+  background-color: #444444;
+  border-radius: 999px;
+}
+
+/* ── Step Label ──────────────────────────────────────────────────────────── */
+.stepLabel {
+  margin-top: 16px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+/* ── Heading ─────────────────────────────────────────────────────────────── */
+.heading {
+  margin-top: 48px;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: center;
+  line-height: 1.25;
+  padding: 0 32px;
+  letter-spacing: -0.01em;
+}
+
+/* ── Mic Button Area ────────────────────────────────────────────────────── */
+.micArea {
+  margin-top: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/*
+  The outer ring: dark circle that frames the white button.
+  We use box-shadow + background to create the thick dark halo visible in the design.
+*/
+.micRing {
+  width: 164px;
+  height: 164px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 65%, #2a2a2a 0%, #111 55%, #000 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  transition:
+    background var(--transition-base),
+    box-shadow var(--transition-base);
+  position: relative;
+}
+
+/* Subtle outer shadow to blend into black bg */
+.micRing::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 6px solid transparent;
+  background: transparent;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+/* Recording state: red pulsing ring */
+.micRingRecording {
+  background: radial-gradient(circle at 50% 65%, #3a0a0a 0%, #1a0505 55%, #000 100%);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.micRingRecording::after {
+  border-color: rgba(237, 28, 36, 0.35);
+  box-shadow: 0 0 0 6px rgba(237, 28, 36, 0.12);
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(237, 28, 36, 0.25); }
+  50%       { box-shadow: 0 0 0 18px rgba(237, 28, 36, 0); }
+}
+
+/* The inner white circle */
+.micCircle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+/* ── Subtitle ────────────────────────────────────────────────────────────── */
+.subtitle {
+  margin-top: 36px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-sec);
+  text-align: center;
+  padding: 0 40px;
+}
+
+/* ── Error ───────────────────────────────────────────────────────────────── */
+.errorText {
+  margin-top: 12px;
+  font-size: var(--font-size-xs);
+  color: var(--color-accent);
+  text-align: center;
+  padding: 0 32px;
+}
+
+/* ── Next / Get Started Button ───────────────────────────────────────────── */
+.nextBtn {
+  margin-top: 28px;
+  padding: 14px 48px;
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-family);
+  letter-spacing: 0.01em;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+  animation: fadeInUp 0.3s ease both;
+}
+
+.nextBtn:hover { opacity: 0.88; }
+.nextBtn:active { transform: scale(0.97); }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Listening Drawer ────────────────────────────────────────────────────── */
+.drawer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #111111;
+  border-radius: 20px 20px 0 0;
+  padding: 24px 28px 80px;  /* extra bottom padding for dots */
+  min-height: 140px;
+
+  /* Hidden state — slid off-screen */
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.drawerOpen {
+  transform: translateY(0);
+}
+
+.drawerLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.drawerText {
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+/* ── Pagination Dots (bottom center) ────────────────────────────────────── */
+.paginationDots {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #444444;
+  transition:
+    background-color var(--transition-base),
+    width var(--transition-base);
+  display: block;
+}
+
+.dotActive {
+  background-color: var(--color-accent);
+  width: 10px;
+  height: 10px;
+}

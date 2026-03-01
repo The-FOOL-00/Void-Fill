@@ -1,0 +1,23 @@
+.dot {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ED1C24;
+  z-index: 9999;
+  animation: pulse 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(237, 28, 36, 0.6);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 0 6px rgba(237, 28, 36, 0);
+  }
+}

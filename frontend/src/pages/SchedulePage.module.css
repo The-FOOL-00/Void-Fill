@@ -1,0 +1,224 @@
+/* ── SchedulePage ── */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  padding: 28px 20px 120px;
+  min-height: 100%;
+  gap: 0;
+}
+
+/* ── Header ── */
+.header {
+  margin-bottom: 20px;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-sec);
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  flex: 1;
+}
+
+.date {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-sec);
+  margin-top: 4px;
+}
+
+/* ── Void banner ── */
+.voidBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.voidDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px #22c55e88;
+}
+
+.voidTitle {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: #22c55e;
+}
+
+.voidSub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-sec);
+  margin-top: 2px;
+}
+
+/* ── Timeline ── */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+}
+
+.blockSkel {
+  height: 72px;
+  border-radius: var(--radius-lg);
+}
+
+/* ── Block card ── */
+.block {
+  display: flex;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.blockAccent {
+  width: 4px;
+  background: var(--bclr, #555);
+  flex-shrink: 0;
+}
+
+.blockBody {
+  padding: 14px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.blockTime {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-sec);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blockDur {
+  background: var(--color-surface-2);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+.blockTitle {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.blockTag {
+  font-size: var(--font-size-xs);
+  color: var(--bclr, #555);
+  text-transform: capitalize;
+}
+
+/* ── Empty state ── */
+.empty {
+  text-align: center;
+  padding: 48px 0;
+  color: var(--color-text-sec);
+  font-size: var(--font-size-sm);
+}
+
+/* ── Status ── */
+.status {
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-sec);
+  padding: 8px 0;
+}
+
+/* ── FAB area ── */
+.fabArea {
+  position: fixed;
+  bottom: 80px;           /* above bottom nav */
+  left: 0; right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.fabHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.fab {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: all;
+  box-shadow: 0 4px 24px rgba(237, 28, 36, 0.45);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.fab:hover {
+  transform: scale(1.06);
+}
+
+.fab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fabActive {
+  background: #b30000;
+  animation: fabPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes fabPulse {
+  0%, 100% { box-shadow: 0 4px 24px rgba(237,28,36,.5); }
+  50%       { box-shadow: 0 4px 40px rgba(237,28,36,.8); }
+}
+
+.fabProcessing {
+  background: #333;
+  animation: fabProcessing 1s ease-in-out infinite;
+}
+
+@keyframes fabProcessing {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}

@@ -1,0 +1,18 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile.railway"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# ---------------------------------------------------------------------------
+# Daily DB backup cron — set up as a SEPARATE Railway service:
+#   1. Railway dashboard → New Service → Cron Job
+#   2. Image: same GitHub repo + Dockerfile.railway
+#   3. Schedule: 0 3 * * *   (daily at 03:00 UTC)
+#   4. Command: /app/scripts/db_backup.sh
+#   5. Add DATABASE_URL (shared variable) + optional BACKUP_DIR / S3_BUCKET
+# ---------------------------------------------------------------------------

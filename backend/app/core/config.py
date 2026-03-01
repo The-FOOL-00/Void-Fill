@@ -3,6 +3,7 @@
 from functools import lru_cache
 from typing import Optional
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +14,8 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        # Allow fields to be set by both their Python name and any alias
+        populate_by_name=True,
     )
 
     # Application
@@ -26,18 +29,31 @@ class Settings(BaseSettings):
     port: int = 8000
     workers: int = 1
 
-    # PostgreSQL
+    # PostgreSQL — individual fields (docker-compose / local)
     postgres_host: str = "postgres"
     postgres_port: int = 5432
     postgres_user: str = "voidfill"
     postgres_password: str = "voidfill_secret"
     postgres_db: str = "voidfill"
 
-    # Redis
+    # Railway-style single-URL override: set DATABASE_URL in Railway dashboard.
+    # When present it takes priority over the individual postgres_* fields.
+    # Railway provides: postgresql://user:pass@host:port/db
+    # This field accepts that exact format; the property below converts scheme.
+    database_url_override: Optional[str] = Field(
+        default=None, validation_alias="DATABASE_URL"
+    )
+
+    # Redis — individual fields (docker-compose / local)
     redis_host: str = "redis"
     redis_port: int = 6379
     redis_db: int = 0
     redis_password: Optional[str] = None
+
+    # Railway-style single-URL override: set REDIS_URL in Railway dashboard.
+    redis_url_override: Optional[str] = Field(
+        default=None, validation_alias="REDIS_URL"
+    )
 
     # Auth (placeholder values for future implementation)
     secret_key: str = "change-me-in-production"
@@ -58,8 +74,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"
 
-    # Gemini
-    gemini_api_key: str = ""
+    # Gemini — accepts both GEMINI_API_KEY and GOOGLE_API_KEY
+    gemini_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+    )
     gemini_model: str = "gemini-2.5-pro"
 
     # LLM Provider
@@ -67,7 +86,20 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        """Construct async PostgreSQL connection string."""
+        """Construct async PostgreSQL connection string.
+
+        When DATABASE_URL is set (e.g. Railway addon), it takes priority.
+        Railway provides postgresql:// — converted to postgresql+asyncpg://.
+        """
+        if self.database_url_override:
+            url = self.database_url_override
+            # SQLAlchemy asyncpg driver requires the +asyncpg scheme variant
+            if url.startswith("postgresql://"):
+                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif url.startswith("postgres://"):
+                # Railway sometimes uses the legacy postgres:// scheme
+                url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+            return url
         return (
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
@@ -76,6 +108,15 @@ class Settings(BaseSettings):
     @property
     def database_url_sync(self) -> str:
         """Construct sync PostgreSQL connection string for migrations."""
+        if self.database_url_override:
+            url = self.database_url_override
+            if url.startswith("postgresql+asyncpg://"):
+                url = url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+            elif url.startswith("postgresql://"):
+                url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+            elif url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+            return url
         return (
             f"postgresql+psycopg2://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
@@ -83,7 +124,12 @@ class Settings(BaseSettings):
 
     @property
     def redis_url(self) -> str:
-        """Construct Redis connection string."""
+        """Construct Redis connection string.
+
+        When REDIS_URL is set (e.g. Railway addon), it takes priority.
+        """
+        if self.redis_url_override:
+            return self.redis_url_override
         auth = f":{self.redis_password}@" if self.redis_password else ""
         return f"redis://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
