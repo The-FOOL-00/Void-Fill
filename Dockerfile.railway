@@ -63,8 +63,9 @@ RUN chmod +x /app/scripts/db_backup.sh
 # Supervisord config
 COPY docker/supervisord.railway.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Railway routes external traffic to port 80 via its edge
-EXPOSE 80
+# Startup script: patches nginx listen port from $PORT, then launches supervisord
+COPY docker/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
-# supervisord manages: nginx (port 80) + uvicorn (port 8000, internal) + voice worker
-CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Railway injects PORT env var — start.sh applies it to nginx at runtime
+CMD ["/app/start.sh"]
