@@ -45,7 +45,8 @@ Format:
   "intent": "goal_create | schedule_create | note_create | void_query | unknown",
   "confidence": 0.0-1.0,
   "goal_title": "string or null",
-  "schedule_time": "string or null",
+  "schedule_time": "string or null (e.g. '7pm', 'tomorrow morning', '3:30pm')",
+  "schedule_activity": "string or null (e.g. 'Study math', 'Gym session', 'Doctor appointment')",
   "note_text": "string or null"
 }
 """
@@ -63,6 +64,7 @@ _FALLBACK_RESULT: dict[str, Any] = {
     "confidence": 0.0,
     "goal_title": None,
     "schedule_time": None,
+    "schedule_activity": None,
     "note_text": None,
 }
 
@@ -180,6 +182,7 @@ class LLMService:
             "confidence": round(confidence, 2),
             "goal_title": data.get("goal_title"),
             "schedule_time": data.get("schedule_time"),
+            "schedule_activity": data.get("schedule_activity"),
             "note_text": data.get("note_text"),
         }
 

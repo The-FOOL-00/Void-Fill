@@ -1,10 +1,14 @@
 """Service layer for AI suggestion generation."""
 
+import asyncio
+import json
 from typing import Optional
 from uuid import UUID
 
+import google.generativeai as genai
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.models.suggestion import Suggestion
 from app.repositories.goal_repository import GoalRepository
@@ -51,7 +55,7 @@ class SuggestionService:
             if goal is not None and goal.user_id == user_id:
                 goal_title = goal.title
 
-        generated = self._generate(
+        generated = await self._generate_with_ai(
             user_id=user_id,
             goal_id=payload.goal_id,
             goal_title=goal_title,
@@ -91,7 +95,7 @@ class SuggestionService:
         user_id: UUID,
         void_minutes: int,
         limit: int = 5,
-    ) -> list[Suggestion]:
+    ) -> list[tuple[float, Suggestion]]:
         """Return suggestions ranked by goal-aware scoring.
 
         Steps:
@@ -217,16 +221,14 @@ class SuggestionService:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _generate(
+    async def _generate_with_ai(
+        self,
         user_id: UUID,
         goal_id: Optional[UUID],
         goal_title: Optional[str],
         limit: int,
     ) -> list[Suggestion]:
-        """Create placeholder suggestion ORM instances.
-
-        The LLM module will replace this with real generation logic.
+        """Generate suggestions using Gemini, with a placeholder fallback.
 
         Args:
             user_id: User UUID.
@@ -237,9 +239,84 @@ class SuggestionService:
         Returns:
             List of unsaved Suggestion ORM instances.
         """
+        context = f" for the goal: '{goal_title}'" if goal_title else " for general productivity"
+
+        prompt = (
+            f"You are VoidFill AI. Generate exactly {limit} actionable productivity suggestions"
+            f"{context}.\n\n"
+            "Each suggestion should be specific, motivating, and completable in a focused session.\n"
+            "Return strict JSON array only. No markdown fences. No explanation.\n\n"
+            "Format:\n"
+            "[\n"
+            "  {\n"
+            '    "text": "clear actionable suggestion (max 120 chars)",\n'
+            '    "estimated_minutes": integer between 10 and 120,\n'
+            '    "score": float between 0.5 and 1.0\n'
+            "  }\n"
+            "]\n"
+        )
+
+        try:
+            settings = get_settings()
+            genai.configure(api_key=settings.gemini_api_key)
+            model = genai.GenerativeModel(settings.gemini_model)
+
+            loop = asyncio.get_running_loop()
+            response = await loop.run_in_executor(
+                None, lambda: model.generate_content(prompt)
+            )
+            raw = response.text.strip()
+
+            # Strip markdown fences if present
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[-1] if "\n" in raw else raw[3:]
+            if raw.endswith("```"):
+                raw = raw[:-3]
+
+            items: list[dict] = json.loads(raw.strip())
+            if not isinstance(items, list):
+                raise ValueError("Expected JSON array")
+
+            suggestions: list[Suggestion] = []
+            durations = [15, 30, 45, 60, 90]
+            for idx, item in enumerate(items[:limit]):
+                suggestions.append(
+                    Suggestion(
+                        user_id=user_id,
+                        goal_id=goal_id,
+                        text=str(item.get("text", "Focus on your next task"))[:1024],
+                        score=max(0.1, min(1.0, float(item.get("score", 0.7)))),
+                        estimated_minutes=int(item.get("estimated_minutes", durations[idx % len(durations)])),
+                        accepted=False,
+                        skipped=False,
+                    )
+                )
+            logger.info(
+                "suggestions_ai_generated",
+                user_id=str(user_id),
+                count=len(suggestions),
+                goal_id=str(goal_id) if goal_id else None,
+            )
+            return suggestions
+
+        except Exception as exc:
+            logger.warning(
+                "suggestion_ai_failed_using_fallback",
+                error=str(exc),
+                user_id=str(user_id),
+            )
+            return self._generate_fallback(user_id, goal_id, goal_title, limit)
+
+    @staticmethod
+    def _generate_fallback(
+        user_id: UUID,
+        goal_id: Optional[UUID],
+        goal_title: Optional[str],
+        limit: int,
+    ) -> list[Suggestion]:
+        """Fallback placeholder suggestions used only when Gemini is unavailable."""
         suggestions: list[Suggestion] = []
         context = f" for goal '{goal_title}'" if goal_title else ""
-
         durations = [15, 30, 45, 60, 90]
         for idx in range(limit):
             score = round(1.0 - (idx * 0.1), 2)
@@ -252,6 +329,7 @@ class SuggestionService:
                     score=max(score, 0.1),
                     estimated_minutes=est,
                     accepted=False,
+                    skipped=False,
                 )
             )
         return suggestions

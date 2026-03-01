@@ -73,7 +73,10 @@ class SuggestionRepository:
         Returns:
             List of Suggestion instances ordered by score descending.
         """
-        stmt = select(Suggestion).where(Suggestion.user_id == user_id)
+        stmt = select(Suggestion).where(
+            Suggestion.user_id == user_id,
+            Suggestion.skipped.is_(False),
+        )
         if goal_id is not None:
             stmt = stmt.where(Suggestion.goal_id == goal_id)
         stmt = (

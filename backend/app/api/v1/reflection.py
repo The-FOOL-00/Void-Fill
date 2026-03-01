@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
-import math
+import asyncio
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
+import google.generativeai as genai
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.goal import Goal
@@ -131,7 +133,7 @@ async def get_latest_reflection(
     top_goal = goals_result.scalar_one_or_none()
     priority_next_week = top_goal.title if top_goal else None
 
-    # ── Build a human-readable summary ───────────────────────────────────────
+    # ── Build an AI-generated summary ────────────────────────────────────────────
     total_sessions = sum(sessions_by_cat.values())
     total_hours = round(sum(hours_by_cat.values()), 1)
     neglected = [s.category for s in stats if s.neglected]
@@ -142,14 +144,44 @@ async def get_latest_reflection(
             "Start by adding some schedule blocks or using the mic button."
         )
     else:
-        summary_text = (
-            f"You logged {total_sessions} session{'s' if total_sessions != 1 else ''} "
-            f"totalling {total_hours} hour{'s' if total_hours != 1.0 else ''} this week."
+        # Build a compact stats description for the Gemini prompt
+        stats_lines = ", ".join(
+            f"{s.category}: {s.sessions} session(s) / {s.hours}h"
+            for s in stats
+            if not s.neglected
         )
-        if neglected:
-            summary_text += f" Areas with no activity: {', '.join(neglected)}."
-        if priority_next_week:
-            summary_text += f" Top goal for next week: {priority_next_week}."
+        neglected_text = f"Neglected areas: {', '.join(neglected)}." if neglected else "No neglected areas."
+        goal_text = f"Top goal: {priority_next_week}." if priority_next_week else ""
+
+        prompt = (
+            "You are VoidFill AI. Write a 2-3 sentence motivational weekly reflection summary "
+            "for a user based on the following stats. Be encouraging and specific. "
+            "No markdown, no JSON, just plain text.\n\n"
+            f"This week: {total_sessions} session(s), {total_hours} total hours.\n"
+            f"Breakdown: {stats_lines}.\n"
+            f"{neglected_text}\n"
+            f"{goal_text}"
+        )
+        try:
+            settings = get_settings()
+            genai.configure(api_key=settings.gemini_api_key)
+            model = genai.GenerativeModel(settings.gemini_model)
+
+            loop = asyncio.get_running_loop()
+            response = await loop.run_in_executor(
+                None, lambda: model.generate_content(prompt)
+            )
+            summary_text = response.text.strip()
+        except Exception:
+            # Graceful fallback to rule-based summary
+            summary_text = (
+                f"You logged {total_sessions} session{'s' if total_sessions != 1 else ''} "
+                f"totalling {total_hours} hour{'s' if total_hours != 1.0 else ''} this week."
+            )
+            if neglected:
+                summary_text += f" Areas with no activity: {', '.join(neglected)}."
+            if priority_next_week:
+                summary_text += f" Top goal for next week: {priority_next_week}."
 
     return ReflectionResponse(
         week_start=week_start.date().isoformat(),

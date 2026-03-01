@@ -132,19 +132,28 @@ class PlannerService:
         llm = get_llm_service()
         logger.info("llm_request_started", prompt_length=len(prompt))
 
-        loop = asyncio.get_running_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: llm._model.generate_content(prompt),
-        )
+        try:
+            loop = asyncio.get_running_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: llm._model.generate_content(prompt),
+            )
 
-        raw = response.text.strip()
+            raw = response.text.strip()
 
-        # Step 12 — Parse JSON
-        data = self._parse_plan_response(raw, title)
+            # Step 12 — Parse JSON
+            data = self._parse_plan_response(raw, title)
 
-        # Step 13 — Logging
-        logger.info("void_plan_generated", user_id=str(user_id))
+            # Step 13 — Logging
+            logger.info("void_plan_generated", user_id=str(user_id))
+        except Exception as exc:
+            logger.warning("planner_llm_failed", error=str(exc), user_id=str(user_id))
+            data = {
+                "recommended_goal": title,
+                "recommended_action": f"Spend {void_minutes} minutes on: {title}",
+                "confidence": round(score, 2),
+                "reason": "AI planner unavailable — showing top suggestion.",
+            }
 
         # Step 14 — Return Response
         return {

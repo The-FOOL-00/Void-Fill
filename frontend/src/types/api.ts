@@ -3,7 +3,7 @@
 export type UUID = string;
 
 // ── Voice ──────────────────────────────────────────────────────────────────
-export type VoiceJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type VoiceJobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'queued';
 
 export interface VoiceUploadResponse {
   job_id: UUID;
@@ -15,15 +15,15 @@ export interface VoiceResultResponse {
   status: VoiceJobStatus;
   transcript: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 export interface VoiceIntelligenceResponse {
-  id: UUID;
-  job_id: UUID;
+  voice_job_id: UUID;
   intent: string;
+  confidence: number;
   extracted_text: string;
-  matched_goal_id: UUID | null;
+  goal_id: UUID | null;
+  action_executed: boolean;
   created_at: string;
 }
 

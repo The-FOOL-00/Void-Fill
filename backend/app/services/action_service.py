@@ -6,6 +6,7 @@ Bridges the gap between intent detection and database mutations:
 """
 
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +21,33 @@ from app.services.goal_service import GoalService
 from app.services.schedule_service import ScheduleService
 
 logger = get_logger(__name__)
+
+
+def _parse_schedule_time(time_str: str) -> Optional[datetime]:
+    """Parse a natural-language time string into a UTC datetime.
+
+    Uses dateutil for fuzzy parsing.  If the resolved time is in the
+    past (more than 5 minutes ago), adds one day so it's always future.
+    Returns ``None`` on any parse failure.
+    """
+    if not time_str:
+        return None
+    try:
+        from dateutil import parser as dtparser
+
+        now = datetime.now(timezone.utc)
+        # Use today at midnight as the base so "7pm" → today 19:00 UTC
+        default = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        parsed = dtparser.parse(time_str, default=default, fuzzy=True)
+        # Attach UTC if tz-naive
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        # Push to next day if the parsed time is already in the past
+        if parsed < now - timedelta(minutes=5):
+            parsed = parsed + timedelta(days=1)
+        return parsed
+    except Exception:
+        return None
 
 
 class ActionService:
@@ -118,23 +146,43 @@ class ActionService:
     async def _handle_schedule_block(self, user_id: UUID, extracted_text: str) -> str:
         """Create a schedule block from extracted text.
 
-        Uses UTC timestamps: start = now + 1 hour, end = now + 2 hours.
+        Splits ``extracted_text`` on ``|||`` to get the activity label and
+        a human-readable time string (e.g. "7pm", "tomorrow morning").
+        The time string is parsed with dateutil; if parsing fails the block
+        defaults to starting 1 hour from now.
 
         Args:
             user_id: The owning user's UUID.
-            extracted_text: The cleaned transcript text to use as block type.
+            extracted_text: ``"<activity>|||<time_str>"`` from voice intelligence.
 
         Returns:
             ``"schedule_created"``
         """
+        # Split activity and time
+        if "|||" in extracted_text:
+            activity_part, time_str = extracted_text.split("|||", 1)
+        else:
+            activity_part = extracted_text
+            time_str = ""
+
+        block_type = activity_part.strip()[:64] if activity_part.strip() else "voice_block"
+
         now = datetime.now(timezone.utc)
+        start_time = _parse_schedule_time(time_str.strip()) or (now + timedelta(hours=1))
+        end_time = start_time + timedelta(hours=1)
+
         payload = ScheduleBlockCreate(
-            start_time=now + timedelta(hours=1),
-            end_time=now + timedelta(hours=2),
-            block_type=extracted_text[:64] if extracted_text else "voice_block",
+            start_time=start_time,
+            end_time=end_time,
+            block_type=block_type,
         )
         block = await self._schedule_service.create_block(user_id, payload)
-        logger.info("schedule_created", block_id=str(block.id), user_id=str(user_id))
+        logger.info(
+            "schedule_created",
+            block_id=str(block.id),
+            user_id=str(user_id),
+            start_time=start_time.isoformat(),
+        )
         return "schedule_created"
 
     async def _handle_note(self, user_id: UUID, extracted_text: str, job_id: UUID) -> str:

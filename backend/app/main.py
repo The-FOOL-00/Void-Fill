@@ -56,6 +56,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     yield
 
+    from app.core.redis import close_redis
+    await close_redis()
     await close_db()
     logger.info("application_shutdown")
 

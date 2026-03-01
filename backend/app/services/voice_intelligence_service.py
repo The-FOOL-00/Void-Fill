@@ -65,12 +65,18 @@ class VoiceIntelligenceService:
         confidence = llm_result["confidence"]
 
         # Derive the best extracted text from the LLM structured fields
-        extracted_text = (
-            llm_result.get("goal_title")
-            or llm_result.get("note_text")
-            or llm_result.get("schedule_time")
-            or transcript.strip()
-        )
+        if intent in ("schedule_create", "schedule_block"):
+            # Store activity and time together so action_service can use both
+            activity = llm_result.get("schedule_activity") or ""
+            time_str = llm_result.get("schedule_time") or ""
+            extracted_text = f"{activity}|||{time_str}"
+        else:
+            extracted_text = (
+                llm_result.get("goal_title")
+                or llm_result.get("note_text")
+                or llm_result.get("schedule_time")
+                or transcript.strip()
+            )
 
         logger.info(
             "intent_detected",

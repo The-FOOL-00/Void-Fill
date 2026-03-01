@@ -59,9 +59,11 @@ async def accept_suggestion(
         )
     )
     suggestion = result.scalar_one_or_none()
-    if suggestion:
-        suggestion.accepted = True
-        await db.commit()
+    if not suggestion:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    suggestion.accepted = True
+    await db.commit()
     return _StatusResponse(status="accepted")
 
 
@@ -75,6 +77,16 @@ async def skip_suggestions(
     user_id: UUID = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> _StatusResponse:
-    # No 'skipped' column yet — just return 200 so the UI can proceed cleanly
-    # Future: add a skipped_at column to Suggestion model
+    """Mark the given suggestions as skipped so they are not shown again."""
+    if suggestion_ids:
+        result = await db.execute(
+            select(Suggestion).where(
+                Suggestion.id.in_(suggestion_ids),
+                Suggestion.user_id == user_id,
+            )
+        )
+        suggestions = result.scalars().all()
+        for s in suggestions:
+            s.skipped = True
+        await db.commit()
     return _StatusResponse(status="skipped")

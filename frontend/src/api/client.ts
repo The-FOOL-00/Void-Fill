@@ -18,13 +18,18 @@ async function http<T>(
 ): Promise<T> {
   let res: Response;
   try {
+    const { headers: optHeaders, ...restOptions } = options;
     res = await fetch(`${BASE}${path}`, {
+      ...restOptions,
       headers: {
         'Content-Type': 'application/json',
         ...getAuthHeaders(),
-        ...options.headers,
+        ...(optHeaders instanceof Headers
+          ? Object.fromEntries(optHeaders.entries())
+          : Array.isArray(optHeaders)
+          ? Object.fromEntries(optHeaders)
+          : optHeaders ?? {}),
       },
-      ...options,
     });
   } catch {
     window.dispatchEvent(new CustomEvent('api:offline'));

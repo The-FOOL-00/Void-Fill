@@ -111,6 +111,7 @@ class VoidService:
         )
         suggestion_dicts = [
             {
+                "id": str(s.id),
                 "goal_id": str(s.goal_id) if s.goal_id else None,
                 "title": s.text,
                 "score": round(final_score, 2),

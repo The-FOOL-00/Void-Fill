@@ -20,6 +20,7 @@ class VoidSlotResponse(BaseModel):
 class VoidSuggestion(BaseModel):
     """A lightweight suggestion surfaced in the void response."""
 
+    id: Optional[UUID] = None
     goal_id: Optional[UUID] = None
     title: str
     score: float

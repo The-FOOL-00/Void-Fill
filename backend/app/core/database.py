@@ -114,6 +114,10 @@ async def init_db() -> None:
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email "
             "ON users (email) WHERE email IS NOT NULL"
         ))
+        await conn.execute(text(
+            "ALTER TABLE suggestions "
+            "ADD COLUMN IF NOT EXISTS skipped BOOLEAN NOT NULL DEFAULT false"
+        ))
 
 
 async def close_db() -> None:

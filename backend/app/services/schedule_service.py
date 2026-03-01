@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import NotFoundError
 from app.core.logging import get_logger
 from app.models.schedule_block import ScheduleBlock
 from app.repositories.schedule_repository import ScheduleRepository
@@ -69,6 +70,6 @@ class ScheduleService:
         """
         block = await self._repo.get_by_id(block_id)
         if block is None or block.user_id != user_id:
-            raise ValueError("Block not found")
+            raise NotFoundError("ScheduleBlock", block_id)
         await self._repo.delete(block)
         logger.info("schedule_block_deleted", block_id=str(block_id), user_id=str(user_id))
