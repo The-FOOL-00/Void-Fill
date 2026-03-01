@@ -9,19 +9,12 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         gcc \
         libpq-dev \
-        ffmpeg \
-        binutils \
-        patchelf \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
-
-# Fix Faster-Whisper executable stack issue
-RUN find /usr/local -name "libctranslate2*.so*" \
-    -exec patchelf --clear-execstack {} \; || true
 
 COPY . .
 

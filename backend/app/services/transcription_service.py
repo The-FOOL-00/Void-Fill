@@ -1,57 +1,50 @@
-"""Transcription service — real speech-to-text via Faster-Whisper.
+"""Transcription service — speech-to-text via Gemini API.
 
-Provides a true singleton Whisper model that loads once and is reused
-across all transcription requests.  Transcription is CPU-heavy and is
-always dispatched to a thread executor so the async event loop is never
-blocked.
+Uses Google Gemini 1.5 Flash to transcribe audio files sent as inline
+base64 data.  No local model is loaded — all inference runs in the cloud,
+making this suitable for memory-constrained deployments (e.g. Railway).
 """
 
-import asyncio
+import base64
 from pathlib import Path
 
+import google.generativeai as genai
+
+from app.core.config import get_settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
+settings = get_settings()
+
+# Map file extensions to MIME types accepted by Gemini
+_MIME_MAP: dict[str, str] = {
+    ".wav": "audio/wav",
+    ".mp3": "audio/mp3",
+    ".m4a": "audio/mp4",
+    ".webm": "audio/webm",
+    ".ogg": "audio/ogg",
+    ".flac": "audio/flac",
+}
+
+_TRANSCRIBE_PROMPT = (
+    "Transcribe this audio exactly as spoken. "
+    "Return only the spoken words with no timestamps, labels, or extra commentary."
+)
 
 
 class TranscriptionService:
-    """Singleton Faster-Whisper transcription engine.
+    """Cloud-based transcription via Gemini 1.5 Flash.
 
-    The underlying ``WhisperModel`` is loaded lazily on first use and
-    shared across every subsequent call.  All public methods are async
-    and delegate the blocking C++ inference to a thread-pool executor.
+    No local model is loaded.  Each call encodes the audio file as
+    base64 and sends it to the Gemini API, which returns the transcript.
     """
-
-    _model = None
-
-    @classmethod
-    def get_model(cls):  # type: ignore[no-untyped-def]
-        """Return the shared WhisperModel, loading it on first call.
-
-        Uses ``base.en`` with int8 quantisation on CPU for a good
-        balance between accuracy and container resource usage.
-        """
-        if cls._model is None:
-            from faster_whisper import WhisperModel
-
-            logger.info("whisper_model_loading", model="base.en", device="cpu", compute_type="int8")
-            cls._model = WhisperModel(
-                "base.en",
-                device="cpu",
-                compute_type="int8",
-            )
-            logger.info("model_loaded", model="base.en")
-        return cls._model
 
     # ------------------------------------------------------------------
     # Public async API
     # ------------------------------------------------------------------
 
     async def transcribe_file(self, file_path: str) -> str:
-        """Transcribe an audio file and return the full text.
-
-        The blocking Whisper inference is executed inside a thread-pool
-        executor so the worker event loop stays responsive.
+        """Transcribe an audio file using Gemini and return the full text.
 
         Args:
             file_path: Absolute path to the audio file on disk.
@@ -61,50 +54,31 @@ class TranscriptionService:
 
         Raises:
             FileNotFoundError: If *file_path* does not exist.
-            RuntimeError: If Whisper fails to produce any segments.
+            RuntimeError: If Gemini returns an empty transcript.
         """
         path = Path(file_path)
         if not path.exists():
             raise FileNotFoundError(f"Audio file not found: {path}")
 
-        logger.info("transcription_started", path=file_path)
+        logger.info("transcription_started", path=file_path, engine="gemini")
 
-        loop = asyncio.get_running_loop()
-        transcript = await loop.run_in_executor(
-            None,
-            lambda: self._sync_transcribe(str(path)),
-        )
+        mime_type = _MIME_MAP.get(path.suffix.lower(), "audio/wav")
 
-        logger.info("transcription_complete", path=file_path, length=len(transcript))
-        return transcript
+        audio_bytes = path.read_bytes()
+        audio_b64 = base64.b64encode(audio_bytes).decode()
 
-    # ------------------------------------------------------------------
-    # Internal sync helper (runs in executor thread)
-    # ------------------------------------------------------------------
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
 
-    def _sync_transcribe(self, file_path: str) -> str:
-        """Run Whisper inference synchronously.
+        response = await model.generate_content_async([
+            {"inline_data": {"mime_type": mime_type, "data": audio_b64}},
+            _TRANSCRIBE_PROMPT,
+        ])
 
-        This method is called inside a thread executor — it must never
-        be awaited directly.
-
-        Args:
-            file_path: Absolute path to the audio file.
-
-        Returns:
-            Concatenated text from all Whisper segments.
-        """
-        model = self.get_model()
-        segments, _info = model.transcribe(
-            file_path,
-            beam_size=5,
-            language="en",
-            vad_filter=True,
-        )
-        text_parts: list[str] = [segment.text.strip() for segment in segments]
-        transcript = " ".join(text_parts).strip()
+        transcript = response.text.strip() if response.text else ""
 
         if not transcript:
-            raise RuntimeError(f"Whisper produced empty transcript for {file_path}")
+            raise RuntimeError(f"Gemini returned empty transcript for {file_path}")
 
+        logger.info("transcription_complete", path=file_path, length=len(transcript))
         return transcript

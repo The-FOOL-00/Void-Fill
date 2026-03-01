@@ -61,7 +61,7 @@ async def process_job(job_id_str: str) -> None:
             if not audio_path.exists():
                 raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
-            # --- Step 1: Transcription (Faster-Whisper) ---
+            # --- Step 1: Transcription (Gemini API) ---
             transcript = await _transcription_service.transcribe_file(str(audio_path))
 
             # --- Step 2: Store transcript + create Note ---

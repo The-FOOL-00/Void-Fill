@@ -23,8 +23,6 @@ WORKDIR /app
 
 # System dependencies:
 #   gcc / libpq-dev  — PostgreSQL client + asyncpg C extension
-#   ffmpeg           — audio processing for faster-whisper
-#   binutils/patchelf — fix ctranslate2 executable stack
 #   nginx            — serves React SPA + proxies /api to uvicorn
 #   supervisor       — process manager (nginx + uvicorn + voice worker)
 RUN apt-get update && \
@@ -32,9 +30,6 @@ RUN apt-get update && \
         gcc \
         libpq-dev \
         postgresql-client \
-        ffmpeg \
-        binutils \
-        patchelf \
         nginx \
         supervisor \
     && rm -rf /var/lib/apt/lists/*
@@ -43,10 +38,6 @@ RUN apt-get update && \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
-
-# Fix Faster-Whisper / ctranslate2 executable-stack issue on Linux
-RUN find /usr/local -name "libctranslate2*.so*" \
-    -exec patchelf --clear-execstack {} \; 2>/dev/null || true
 
 # Backend source
 COPY backend/ ./backend/
