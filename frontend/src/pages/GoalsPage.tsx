@@ -64,7 +64,7 @@ function categorizeGoal(goal: Goal): CategoryKey {
   for (const cat of CATEGORIES) {
     if (cat.keywords.some((kw) => text.includes(kw))) return cat.key
   }
-  return CATEGORIES[goal.priority % CATEGORIES.length].key
+  return CATEGORIES[Math.floor(((goal.priority ?? 0) * CATEGORIES.length)) % CATEGORIES.length].key
 }
 
 function timeAgo(iso: string): string {
@@ -79,11 +79,11 @@ function timeAgo(iso: string): string {
   return 'Updated today'
 }
 
-async function pollTranscript(jobId: string, maxAttempts = 20): Promise<string | null> {
+async function pollTranscript(jobId: string, maxAttempts = 40): Promise<string | null> {
   for (let i = 0; i < maxAttempts; i++) {
-    await new Promise((r) => setTimeout(r, 1500))
+    await new Promise((r) => setTimeout(r, 2000))
     const result = await api.voice.result(jobId)
-    if (result.status === 'completed' && result.transcript) return result.transcript
+    if ((result.status === 'completed' || result.status === 'partial') && result.transcript) return result.transcript
     if (result.status === 'failed') return null
   }
   return null

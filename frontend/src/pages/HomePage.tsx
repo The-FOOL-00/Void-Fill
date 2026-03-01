@@ -183,17 +183,17 @@ export default function HomePage() {
       try {
         const { job_id } = await api.voice.upload(voice.audioBlob!)
 
-        // Poll for transcript
+        // Poll for transcript (accept both 'completed' and 'partial')
         let transcript = ''
         let attempts = 0
-        const maxAttempts = 20
+        const maxAttempts = 60   // 60 × 2s = 120s max wait
 
         await new Promise<void>((resolve, reject) => {
           pollingRef.current = setInterval(async () => {
             attempts++
             try {
               const result = await api.voice.result(job_id)
-              if (result.status === 'completed' && result.transcript) {
+              if ((result.status === 'completed' || result.status === 'partial') && result.transcript) {
                 transcript = result.transcript
                 if (pollingRef.current) clearInterval(pollingRef.current)
                 resolve()
@@ -210,7 +210,7 @@ export default function HomePage() {
                 reject(new Error('Polling failed'))
               }
             }
-          }, 1500)
+          }, 2000)
         })
 
         // Refresh void status

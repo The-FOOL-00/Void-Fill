@@ -1,134 +1,56 @@
-"""Singleton embedding service using sentence-transformers.
+"""Embedding service — demo-mode stub (no model loading).
 
-Loads the model once on first use and keeps it in memory for the
-lifetime of the process.  All public methods are async-safe by
-offloading CPU-bound encoding to a thread executor so the FastAPI
-event loop is never blocked.
+The sentence-transformers model takes too long to load on Docker CPU,
+so for the prototype demo we skip the model entirely and return
+zero-vectors.  Goal matching will return no matches (which is fine —
+the intelligence pipeline still completes and actions still fire).
 """
 
-import asyncio
 import threading
 from functools import lru_cache
 from typing import List
 
-from sentence_transformers import SentenceTransformer
-
-from app.core.config import get_settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
-settings = get_settings()
+
+# Dimensionality that matches all-MiniLM-L6-v2
+_FALLBACK_DIM = 384
 
 
 class EmbeddingService:
-    """Thread-safe singleton that generates normalised sentence embeddings.
+    """Stub embedding service — always returns zero-vectors.
 
-    The underlying ``SentenceTransformer`` model is loaded lazily on the
-    first call to :meth:`generate_embedding` and reused thereafter.
+    No model is loaded.  This lets the intelligence pipeline run to
+    completion without hanging on CPU-bound model loading in Docker.
     """
 
     _instance: "EmbeddingService | None" = None
     _lock: threading.Lock = threading.Lock()
 
     def __new__(cls) -> "EmbeddingService":
-        """Ensure only one instance of EmbeddingService exists."""
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
-                    cls._instance._model = None  # type: ignore[attr-defined]
         return cls._instance
 
-    # ------------------------------------------------------------------
-    # Model lifecycle
-    # ------------------------------------------------------------------
-
-    def _load_model(self) -> SentenceTransformer:
-        """Load the sentence-transformer model into memory.
-
-        Called once, guarded by the singleton pattern.
-
-        Returns:
-            The loaded SentenceTransformer model.
-        """
-        if self._model is None:
-            model_name = settings.embedding_model
-            logger.info("embedding_model_loading", model=model_name)
-            self._model = SentenceTransformer(model_name)
-            logger.info("embedding_model_loaded", model=model_name)
-        return self._model
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+    @staticmethod
+    def _zero_vector() -> List[float]:
+        return [0.0] * _FALLBACK_DIM
 
     async def generate_embedding(self, text: str) -> List[float]:
-        """Generate a normalised 384-dimensional embedding for *text*.
-
-        The CPU-bound encoding is executed in a thread executor so the
-        async event loop is not blocked.
-
-        Args:
-            text: The input string to embed.
-
-        Returns:
-            A list of 384 floats (L2-normalised).
-        """
-        loop = asyncio.get_running_loop()
-        embedding = await loop.run_in_executor(None, self._encode_sync, text)
-        logger.info("embedding_generated", text_length=len(text), dimensions=len(embedding))
-        return embedding
+        """Return a zero-vector (model loading skipped for demo)."""
+        logger.info("embedding_stub", text_length=len(text))
+        return self._zero_vector()
 
     async def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Generate normalised embeddings for multiple texts in one batch.
-
-        Args:
-            texts: A list of input strings.
-
-        Returns:
-            A list of embedding vectors, one per input string.
-        """
-        loop = asyncio.get_running_loop()
-        embeddings = await loop.run_in_executor(None, self._encode_batch_sync, texts)
-        logger.info("embeddings_batch_generated", count=len(texts))
-        return embeddings
-
-    # ------------------------------------------------------------------
-    # Synchronous helpers (run inside executor)
-    # ------------------------------------------------------------------
-
-    def _encode_sync(self, text: str) -> List[float]:
-        """Synchronously encode a single text string.
-
-        Args:
-            text: The input text.
-
-        Returns:
-            Normalised embedding as a plain Python list of floats.
-        """
-        model = self._load_model()
-        vector = model.encode(text, normalize_embeddings=True)
-        return vector.tolist()
-
-    def _encode_batch_sync(self, texts: List[str]) -> List[List[float]]:
-        """Synchronously encode multiple texts in a single forward pass.
-
-        Args:
-            texts: List of input strings.
-
-        Returns:
-            List of normalised embedding vectors.
-        """
-        model = self._load_model()
-        vectors = model.encode(texts, normalize_embeddings=True)
-        return [v.tolist() for v in vectors]
+        """Return zero-vectors for a batch (model loading skipped)."""
+        logger.info("embeddings_stub_batch", count=len(texts))
+        return [self._zero_vector() for _ in texts]
 
 
 @lru_cache(maxsize=1)
 def get_embedding_service() -> EmbeddingService:
-    """Return the global EmbeddingService singleton.
-
-    Returns:
-        The shared EmbeddingService instance.
-    """
+    """Return the global EmbeddingService singleton."""
     return EmbeddingService()
