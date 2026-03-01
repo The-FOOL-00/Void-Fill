@@ -1,5 +1,6 @@
 """Repository for Note database operations."""
 
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -44,3 +45,16 @@ class NoteRepository:
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_by_voice_job_id(self, voice_job_id: UUID) -> Optional[Note]:
+        """Return a Note linked to a specific VoiceJob, if any.
+
+        Args:
+            voice_job_id: UUID of the originating voice job.
+
+        Returns:
+            The Note instance, or ``None``.
+        """
+        stmt = select(Note).where(Note.voice_job_id == voice_job_id).limit(1)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()

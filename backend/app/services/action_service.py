@@ -140,14 +140,25 @@ class ActionService:
     async def _handle_note(self, user_id: UUID, extracted_text: str, job_id: UUID) -> str:
         """Create a note from extracted text.
 
+        If the voice worker already created a Note for this job_id, update
+        its text with the cleaned ``extracted_text`` instead of creating a
+        duplicate.
+
         Args:
             user_id: The owning user's UUID.
             extracted_text: The cleaned transcript text.
             job_id: The originating VoiceJob UUID (foreign key link).
 
         Returns:
-            ``"note_created"``
+            ``"note_created"`` or ``"note_updated"``
         """
+        existing = await self._note_repo.get_by_voice_job_id(job_id)
+        if existing is not None:
+            existing.text = extracted_text
+            await self._note_repo._session.flush()
+            logger.info("note_updated", note_id=str(existing.id), user_id=str(user_id))
+            return "note_updated"
+
         note = Note(
             user_id=user_id,
             text=extracted_text,

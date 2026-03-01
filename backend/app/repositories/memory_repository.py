@@ -42,7 +42,7 @@ class MemoryRepository:
             minutes=minutes,
         )
         self._session.add(memory)
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(memory)
         return memory
 
