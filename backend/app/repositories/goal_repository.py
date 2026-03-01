@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import PGVECTOR_AVAILABLE
 from app.models.goal import Goal
 
 
@@ -75,6 +76,18 @@ class GoalRepository:
         Returns:
             List of Goal instances ordered by cosine similarity (closest first).
         """
+        if not PGVECTOR_AVAILABLE:
+            # pgvector not installed — fall back to priority-ordered results
+            # so callers get something useful rather than a SQL error.
+            stmt = (
+                select(Goal)
+                .where(Goal.user_id == user_id)
+                .order_by(Goal.priority.desc(), Goal.created_at.desc())
+                .limit(limit)
+            )
+            result = await self._session.execute(stmt)
+            return list(result.scalars().all())
+
         stmt = (
             select(Goal)
             .where(Goal.user_id == user_id)

@@ -8,7 +8,7 @@
 
 ## Live Demo
 
-[Railway URL — to be added after deployment]
+🔗 **[https://void-fill-production.up.railway.app](https://void-fill-production.up.railway.app)**
 
 ## GitHub
 
@@ -24,19 +24,20 @@ VoidFill automatically detects free gaps in your schedule and fills them with ac
 
 ## Tech Stack
 
-### Prototype (current build)
+### Current Build (deployed)
 
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 18 + TypeScript + Vite 6 + CSS Modules |
 | Voice I/O | Web Speech API / MediaRecorder (browser) |
 | Backend | FastAPI + Python 3.11 + SQLAlchemy 2 + Pydantic v2 |
-| Database | PostgreSQL 16 + pgvector (semantic search) |
+| Auth | JWT (python-jose) + bcrypt — Bearer token, register/login with demo-skip |
+| Database | Neon PostgreSQL 17 + pgvector (cloud, semantic search enabled) |
 | Transcription | faster-whisper (CTranslate2) |
 | LLM | Google Gemini 2.5 Pro |
-| Embeddings | sentence-transformers (all-MiniLM-L6-v2) |
+| Embeddings | sentence-transformers (all-MiniLM-L6-v2, 384-dim) |
 | Queue | Redis + background workers |
-| Deployment | Docker · Railway · nginx · supervisord |
+| Deployment | Railway · Docker · nginx · supervisord |
 
 ### AMD Production Vision
 
@@ -49,6 +50,20 @@ VoidFill automatically detects free gaps in your schedule and fills them with ac
 
 ---
 
+## Authentication
+
+VoidFill uses JWT-based authentication.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/auth/register` | POST | Create account → returns `access_token` |
+| `/api/v1/auth/login` | POST | Sign in → returns `access_token` |
+| `/api/v1/auth/login/token` | POST | OAuth2 form login (for `/docs`) |
+
+All protected endpoints require `Authorization: Bearer <token>`. The frontend also supports **"Continue without account"** which runs in demo mode using a shared demo user ID.
+
+---
+
 ## Local Setup
 
 ### 1. Clone & configure
@@ -57,7 +72,7 @@ VoidFill automatically detects free gaps in your schedule and fills them with ac
 git clone https://github.com/The-FOOL-00/Void-Fill.git
 cd Void-Fill
 cp .env.example backend/.env
-# Edit backend/.env — at minimum set GEMINI_API_KEY and POSTGRES_PASSWORD
+# Edit backend/.env — set GEMINI_API_KEY, SECRET_KEY, and database credentials
 ```
 
 ### 2. Start the stack
@@ -66,7 +81,9 @@ cp .env.example backend/.env
 docker compose up --build
 ```
 
-This launches **Backend API** (`:8000`), **Voice Worker** (faster-whisper), **PostgreSQL 16** + pgvector, and **Redis**.
+This launches **Backend API** (`:8000`), **Voice Worker** (faster-whisper), **PostgreSQL** + pgvector, and **Redis**.
+
+> **Cloud option**: Set `DATABASE_URL` to a Neon connection string (with `sslmode=require`) — the app strips incompatible asyncpg parameters automatically and enables SSL.
 
 ### 3. Install frontend dependencies
 
@@ -85,7 +102,7 @@ Opens at `http://localhost:3000` — Vite proxies `/api` to the backend automati
 
 ### 5. Open the app
 
-Navigate to `http://localhost:3000`. You'll land on the onboarding flow — speak your name, set a goal, and you're in.
+Navigate to `http://localhost:3000`. Register an account or tap **Continue without account** to explore in demo mode.
 
 ---
 
@@ -102,6 +119,7 @@ All variables live in `backend/.env`. Copy from [.env.example](.env.example) and
 | `HOST` | Server bind address | `0.0.0.0` |
 | `PORT` | Server port | `8000` |
 | `WORKERS` | Uvicorn worker count | `1` |
+| `DATABASE_URL` | Full async DB URL (overrides individual POSTGRES_* vars) | — |
 | `POSTGRES_HOST` | PostgreSQL hostname | `postgres` |
 | `POSTGRES_PORT` | PostgreSQL port | `5432` |
 | `POSTGRES_USER` | Database user | `voidfill` |
@@ -111,7 +129,7 @@ All variables live in `backend/.env`. Copy from [.env.example](.env.example) and
 | `REDIS_PORT` | Redis port | `6379` |
 | `REDIS_DB` | Redis database index | `0` |
 | `REDIS_PASSWORD` | Redis password (blank for local) | — |
-| `SECRET_KEY` | JWT / session signing key | *(required in prod)* |
+| `SECRET_KEY` | JWT signing key | *(required in prod)* |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token TTL | `60` |
 | `ALGORITHM` | JWT algorithm | `HS256` |
 | `EMBEDDING_MODEL` | sentence-transformers model name | `all-MiniLM-L6-v2` |
@@ -126,19 +144,19 @@ All variables live in `backend/.env`. Copy from [.env.example](.env.example) and
 
 ## Architecture
 
-VoidFill was built across 17 phases: **Phases 1–6** laid the backend foundation — FastAPI skeleton, PostgreSQL + pgvector models, repository layer, and core services. **Phases 7–10** introduced the AI engines — Gemini-powered LLM service, voice transcription pipeline (faster-whisper → Redis worker), embedding service for semantic retrieval, and the suggestion/void-detection loop. **Phases 11–15** added intelligence layers — goal memory, habit tracking, weekly reflection analytics, and the Phase 15 autonomy engine that schedules actions without user intervention. **Phase 16** delivered the full React 18 frontend — onboarding, voice-first home screen, goals, reflection, settings, and the autonomy dashboard. **Phase 17** hardened everything for production — audit, README, environment hygiene, and final deployment push.
+VoidFill was built across 17 phases: **Phases 1–6** laid the backend foundation — FastAPI skeleton, PostgreSQL + pgvector models, repository layer, and core services. **Phases 7–10** introduced the AI engines — Gemini-powered LLM service, voice transcription pipeline (faster-whisper → Redis worker), embedding service for semantic retrieval, and the suggestion/void-detection loop. **Phases 11–15** added intelligence layers — goal memory, habit tracking, weekly reflection analytics, and the Phase 15 autonomy engine that schedules actions without user intervention. **Phase 16** delivered the full React 18 frontend — onboarding, voice-first home screen, goals, reflection, settings, and the autonomy dashboard. **Phase 17** hardened everything for production — JWT auth, Neon pgvector cloud, Railway deployment, security audit, and documentation.
 
 ```
 frontend/              React 18 · Vite · TypeScript · CSS Modules
 backend/
   app/
-    api/v1/            FastAPI route handlers (voice, goals, schedule, suggestions, void, notes)
+    api/v1/            FastAPI route handlers (auth, voice, goals, schedule, suggestions, void, notes)
     services/          Business logic — LLM, voice, autonomy engine, embeddings, scheduling
     repositories/      SQLAlchemy ORM data-access layer
     models/            Database models with pgvector embedding columns
     workers/           Background voice transcription (faster-whisper via Redis queue)
     schemas/           Pydantic v2 request / response models
-    core/              Config, database, Redis, security, structured logging
+    core/              Config, database, Redis, security (JWT + bcrypt), structured logging
 ```
 
 ---

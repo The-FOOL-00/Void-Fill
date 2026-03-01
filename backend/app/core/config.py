@@ -88,22 +88,37 @@ class Settings(BaseSettings):
     def database_url(self) -> str:
         """Construct async PostgreSQL connection string.
 
-        When DATABASE_URL is set (e.g. Railway addon), it takes priority.
-        Railway provides postgresql:// — converted to postgresql+asyncpg://.
+        When DATABASE_URL is set (e.g. Railway/Neon), it takes priority.
+        Converts scheme to postgresql+asyncpg:// and strips sslmode so that
+        SSL is passed via connect_args instead (asyncpg doesn't use libpq flags).
         """
         if self.database_url_override:
             url = self.database_url_override
-            # SQLAlchemy asyncpg driver requires the +asyncpg scheme variant
             if url.startswith("postgresql://"):
                 url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
             elif url.startswith("postgres://"):
-                # Railway sometimes uses the legacy postgres:// scheme
                 url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+            # Strip libpq-only params — asyncpg uses connect_args instead
+            import re
+            url = re.sub(r'[?&]sslmode=[^&]*', '', url)
+            url = re.sub(r'[?&]ssl=[^&]*', '', url)
+            url = re.sub(r'[?&]channel_binding=[^&]*', '', url)
+            # Clean up trailing ?, & or && artifacts
+            url = re.sub(r'\?&', '?', url)
+            url = re.sub(r'&&', '&', url)
+            url = url.rstrip('?').rstrip('&')
             return url
         return (
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
+
+    @property
+    def database_use_ssl(self) -> bool:
+        """True when the DATABASE_URL override contains sslmode=require (e.g. Neon)."""
+        if self.database_url_override:
+            return "sslmode=require" in self.database_url_override or "ssl=require" in self.database_url_override
+        return False
 
     @property
     def database_url_sync(self) -> str:

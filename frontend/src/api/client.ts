@@ -2,10 +2,15 @@
  * Central API client for VoidFill backend.
  * All calls route through the /api/v1 prefix.
  * In dev, Vite proxies /api → backend. In prod, nginx handles it.
- * Auth is stubbed on the backend (returns DEMO_USER_ID), so no headers needed.
+ * Auth: JWT stored in localStorage under 'authToken', sent as Bearer header.
  */
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api/v1';
+
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('authToken');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 async function http<T>(
   path: string,
@@ -16,6 +21,7 @@ async function http<T>(
     res = await fetch(`${BASE}${path}`, {
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
         ...options.headers,
       },
       ...options,
@@ -54,7 +60,10 @@ async function httpForm<T>(path: string, form: FormData): Promise<T> {
     res = await fetch(`${BASE}${path}`, {
       method: 'POST',
       body: form,
-      // Do NOT set Content-Type — let browser set multipart boundary
+      headers: {
+        ...getAuthHeaders(),
+        // Do NOT set Content-Type — let browser set multipart boundary
+      },
     });
   } catch {
     window.dispatchEvent(new CustomEvent('api:offline'));
@@ -74,6 +83,20 @@ async function httpForm<T>(path: string, form: FormData): Promise<T> {
 }
 
 export const api = {
+  // ── Auth ───────────────────────────────────────────────────────────────
+  auth: {
+    register: (email: string, password: string, timezone = 'UTC') =>
+      http<{ access_token: string; user_id: string }>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, timezone }),
+      }),
+    login: (email: string, password: string) =>
+      http<{ access_token: string; user_id: string }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      }),
+  },
+
   // ── Voice ──────────────────────────────────────────────────────────────
   voice: {
     upload: (file: Blob, filename = 'recording.webm') => {

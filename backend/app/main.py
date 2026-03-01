@@ -10,7 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import autonomy, goals, habits, memory, notes, schedule, suggestions, voice, void
+from app.api.v1 import auth, autonomy, goals, habits, memory, notes, schedule, suggestions, voice, void
 from app.core.config import get_settings
 from app.core.database import close_db, init_db
 from app.core.exceptions import (
@@ -183,6 +183,7 @@ async def health() -> dict:
 # Versioned routes
 # ---------------------------------------------------------------------------
 
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(voice.router, prefix="/api/v1")
 app.include_router(goals.router, prefix="/api/v1")
 app.include_router(schedule.router, prefix="/api/v1")

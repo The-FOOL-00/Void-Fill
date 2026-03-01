@@ -2,6 +2,9 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { VoiceProvider } from './context/VoiceContext'
 
+// Auth — full-bleed, no nav shell
+import AuthPage from './pages/AuthPage'
+
 // Onboarding — full-bleed, no nav shell
 import OnboardingPage from './pages/OnboardingPage'
 
@@ -17,24 +20,29 @@ import SettingsPage from './pages/SettingsPage'
 // Shared layout shell (bottom nav)
 import AppShell from './components/AppShell'
 
-/** Redirects / based on localStorage.onboardingComplete (T01/T31) */
+/** Redirects / based on authToken + onboardingComplete */
 function RootRedirect() {
   const navigate = useNavigate()
   useEffect(() => {
-    if (localStorage.getItem('onboardingComplete') === 'true') {
-      navigate('/home', { replace: true })
-    } else {
+    const hasToken = !!localStorage.getItem('authToken')
+    const onboarded = localStorage.getItem('onboardingComplete') === 'true'
+    if (!hasToken) {
+      // No account yet — show auth page (can skip to demo)
+      navigate('/auth', { replace: true })
+    } else if (!onboarded) {
       navigate('/onboarding', { replace: true })
+    } else {
+      navigate('/home', { replace: true })
     }
   }, [navigate])
   return null
 }
 
-/** Listens for auth:expired events and redirects to onboarding (T29) */
+/** Redirects to /auth on token expiry */
 function AuthExpiredHandler() {
   const navigate = useNavigate()
   useEffect(() => {
-    const handler = () => setTimeout(() => navigate('/onboarding'), 1500)
+    const handler = () => setTimeout(() => navigate('/auth'), 1500)
     window.addEventListener('auth:expired', handler)
     return () => window.removeEventListener('auth:expired', handler)
   }, [navigate])
@@ -47,8 +55,11 @@ export default function App() {
       <VoiceProvider>
         <AuthExpiredHandler />
         <Routes>
-          {/* Default → localStorage check */}
+          {/* Default → token/onboarding check */}
           <Route index element={<RootRedirect />} />
+
+          {/* Auth lives outside AppShell */}
+          <Route path="/auth" element={<AuthPage />} />
 
           {/* Onboarding lives outside AppShell — no bottom nav */}
           <Route path="/onboarding" element={<OnboardingPage />} />

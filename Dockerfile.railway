@@ -57,9 +57,13 @@ COPY --from=frontend /app/frontend/dist ./frontend/dist
 # Persistent audio storage directory
 RUN mkdir -p /app/audio
 
-# Nginx config (removes default site first)
-COPY docker/nginx.railway.conf /etc/nginx/conf.d/default.conf
-RUN rm -f /etc/nginx/sites-enabled/default
+# Nginx — replace the main nginx.conf entirely so no default server blocks
+# are included, then install our app server config as the only vhost.
+COPY docker/nginx-main.conf /etc/nginx/nginx.conf
+COPY docker/nginx.railway.conf /etc/nginx/voidfill.conf
+RUN rm -f /etc/nginx/sites-enabled/default && \
+    rm -f /etc/nginx/conf.d/default.conf && \
+    rm -f /etc/nginx/sites-available/default
 
 # Backup script (used by Railway cron service — see scripts/db_backup.sh)
 COPY scripts/db_backup.sh /app/scripts/db_backup.sh
