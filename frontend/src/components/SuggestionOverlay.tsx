@@ -76,8 +76,8 @@ export default function SuggestionOverlay({ suggestions, transcript, onClose, on
   const handleDismiss = useCallback(() => {
     cancelTTS()
     const ids = suggestions
-      .map((s) => s.goal_id)
-      .filter((id): id is string => id !== null)
+      .map((s) => s.id)
+      .filter((id): id is string => !!id)
     if (ids.length > 0) {
       api.suggestions.skip(ids).catch(() => null)
     }
@@ -91,8 +91,8 @@ export default function SuggestionOverlay({ suggestions, transcript, onClose, on
     if (selectedIdx === null) return
     cancelTTS()
     const selected = suggestions[selectedIdx]
-    if (selected.goal_id) {
-      api.suggestions.accept(selected.goal_id).catch(() => null)
+    if (selected.id) {
+      api.suggestions.accept(selected.id).catch(() => null)
     }
     speak('Good choice. Go for it.')
     setVisible(false)

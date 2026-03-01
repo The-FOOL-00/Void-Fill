@@ -14,10 +14,13 @@ class SuggestionRequest(BaseModel):
         default=None, description="Optionally scope suggestions to a specific goal"
     )
     limit: int = Field(default=5, ge=1, le=20, description="Maximum suggestions to generate")
+    context: Optional[str] = Field(
+        default=None, description="Optional transcript/context to inform suggestion generation"
+    )
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{"goal_id": None, "limit": 5}]
+            "examples": [{"goal_id": None, "limit": 5, "context": None}]
         }
     }
 

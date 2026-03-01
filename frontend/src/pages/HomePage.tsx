@@ -70,9 +70,10 @@ function accentColor(title: string): string {
 /** Convert a backend Suggestion (from POST /suggestions/request) to our VoidSuggestion shape */
 function toVoidSuggestion(s: Suggestion): VoidSuggestion {
   return {
+    id: s.id,
     goal_id: s.goal_id,
-    title: s.content || 'Suggestion',
-    score: 0,
+    title: s.text || 'Suggestion',
+    score: s.score ?? 0,
     reason: undefined,
   }
 }

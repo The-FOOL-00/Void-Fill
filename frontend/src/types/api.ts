@@ -60,8 +60,10 @@ export interface Suggestion {
   id: UUID;
   user_id: UUID;
   goal_id: UUID | null;
-  content: string;
-  type: string;
+  text: string;
+  score: number;
+  estimated_minutes: number | null;
+  accepted: boolean;
   created_at: string;
 }
 
@@ -134,6 +136,7 @@ export interface VoidSlotResponse {
 }
 
 export interface VoidSuggestion {
+  id?: UUID;
   goal_id: UUID | null;
   title: string;
   score: number;

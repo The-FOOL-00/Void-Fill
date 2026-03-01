@@ -57,7 +57,8 @@ export default function AuthPage() {
   }
 
   const skipAuth = () => {
-    // Continue as the anonymous demo user (no token)
+    // Continue as the anonymous demo user (no token — backend falls back to DEMO_USER_ID)
+    localStorage.setItem('demoMode', 'true')
     const onboarded = localStorage.getItem('onboardingComplete') === 'true'
     navigate(onboarded ? '/home' : '/onboarding', { replace: true })
   }

@@ -109,6 +109,7 @@ export default function OnboardingPage() {
       reset()
     } else {
       // Onboarding complete → go to home
+      localStorage.setItem('onboardingComplete', 'true')
       navigate('/home')
     }
   }
@@ -118,7 +119,10 @@ export default function OnboardingPage() {
   return (
     <div className={styles.page}>
       {/* ── Skip button ── */}
-      <button className={styles.skipBtn} onClick={() => navigate('/home')}>
+      <button className={styles.skipBtn} onClick={() => {
+        localStorage.setItem('onboardingComplete', 'true')
+        navigate('/home')
+      }}>
         Skip
       </button>
 

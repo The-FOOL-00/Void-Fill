@@ -16,18 +16,22 @@ import ReflectionPage from './pages/ReflectionPage'
 import SchedulePage from './pages/SchedulePage'
 import NotesPage from './pages/NotesPage'
 import SettingsPage from './pages/SettingsPage'
+import HabitsPage from './pages/HabitsPage'
+import MemoryPage from './pages/MemoryPage'
 
 // Shared layout shell (bottom nav)
 import AppShell from './components/AppShell'
+import AuthGuard from './components/AuthGuard'
 
 /** Redirects / based on authToken + onboardingComplete */
 function RootRedirect() {
   const navigate = useNavigate()
   useEffect(() => {
     const hasToken = !!localStorage.getItem('authToken')
+    const isDemoUser = localStorage.getItem('demoMode') === 'true'
     const onboarded = localStorage.getItem('onboardingComplete') === 'true'
-    if (!hasToken) {
-      // No account yet — show auth page (can skip to demo)
+    if (!hasToken && !isDemoUser) {
+      // No account and not demo — show auth page
       navigate('/auth', { replace: true })
     } else if (!onboarded) {
       navigate('/onboarding', { replace: true })
@@ -64,8 +68,8 @@ export default function App() {
           {/* Onboarding lives outside AppShell — no bottom nav */}
           <Route path="/onboarding" element={<OnboardingPage />} />
 
-          {/* Main app pages wrapped in AppShell (bottom nav) */}
-          <Route element={<AppShell />}>
+          {/* Main app pages wrapped in AppShell (bottom nav) + auth guard */}
+          <Route element={<AuthGuard><AppShell /></AuthGuard>}>
             <Route path="/home" element={<HomePage />} />
             <Route path="/voice" element={<VoicePage />} />
             <Route path="/goals" element={<GoalsPage />} />
@@ -73,6 +77,8 @@ export default function App() {
             <Route path="/suggestions" element={<Navigate to="/reflection" replace />} />
             <Route path="/schedule" element={<SchedulePage />} />
             <Route path="/notes" element={<NotesPage />} />
+            <Route path="/habits" element={<HabitsPage />} />
+            <Route path="/memory" element={<MemoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Routes>

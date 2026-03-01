@@ -43,9 +43,21 @@ function IconSettings({ active }: { active: boolean }) {
   )
 }
 
+function IconCalendar({ active }: { active: boolean }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#ED1C24' : '#555'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  )
+}
+
 const NAV_ITEMS = [
   { to: '/home',        Icon: IconHome     },
   { to: '/goals',       Icon: IconTarget   },
+  { to: '/schedule',    Icon: IconCalendar },
   { to: '/reflection',  Icon: IconSparkle  },
   { to: '/settings',    Icon: IconSettings },
 ]

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import styles from './SettingsPage.module.css'
 
 const CATEGORIES = [
@@ -22,6 +22,9 @@ const RESET_KEYS = [
   'authToken',
   'userId',
   'userEmail',
+  'demoMode',
+  'autonomyLog',
+  'autonomyEnabled',
 ]
 
 function ChevronIcon({ rotated }: { rotated?: boolean }) {
@@ -195,6 +198,29 @@ export default function SettingsPage() {
               <span className={styles.catColor}>{cat.color}</span>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Quick Links — pages not in bottom nav */}
+      <section className={styles.section}>
+        <p className={styles.sectionLabel}>More</p>
+        <div className={styles.card}>
+          <Link to="/notes" className={`${styles.row} ${styles.rowDivider} ${styles.rowTappable}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <span>Notes</span>
+            <ChevronIcon />
+          </Link>
+          <Link to="/habits" className={`${styles.row} ${styles.rowDivider} ${styles.rowTappable}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <span>Habits</span>
+            <ChevronIcon />
+          </Link>
+          <Link to="/memory" className={`${styles.row} ${styles.rowDivider} ${styles.rowTappable}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <span>Memory</span>
+            <ChevronIcon />
+          </Link>
+          <Link to="/voice" className={`${styles.row} ${styles.rowTappable}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <span>Voice Lab</span>
+            <ChevronIcon />
+          </Link>
         </div>
       </section>
 
