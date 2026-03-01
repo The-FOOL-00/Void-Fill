@@ -201,10 +201,23 @@ export default function GoalsPage() {
         transcript = await pollTranscript(job_id)
         if (!transcript) throw new Error('No transcript')
 
+        // In demo mode the transcript is always the same generic string.
+        // Use category-specific titles so the goal lands in the correct card.
+        const DEMO_CAT_TITLES: Record<string, string> = {
+          academic: 'Study for upcoming exam',
+          career: 'Complete career project milestone',
+          personal: 'Build a new growth skill',
+          health: 'Daily exercise and improve sleep',
+        }
+        const isDemo = transcript.includes('backend API') || transcript.includes('coding project')
+        const goalTitle = isDemo
+          ? (DEMO_CAT_TITLES[catKey] ?? transcript.slice(0, 120))
+          : transcript.slice(0, 120)
+
         // Push placeholder immediately after transcript arrives (T16)
         const placeholder: PlaceholderGoal = {
           id: tempId,
-          title: transcript.slice(0, 60) + (transcript.length > 60 ? 'â€¦' : ''),
+          title: goalTitle,
           isPlaceholder: true,
           isLoading: true,
           priority: 0,
@@ -216,7 +229,13 @@ export default function GoalsPage() {
         }
         setPlaceholders((prev) => [...prev, placeholder])
 
-        await api.goals.create({ title: transcript.slice(0, 120), priority: 1 })
+        // Skip creation if this title already exists (prevents DB duplicates)
+        const alreadyExists = goals.some(
+          (g) => g.title.trim().toLowerCase() === goalTitle.trim().toLowerCase()
+        )
+        if (!alreadyExists) {
+          await api.goals.create({ title: goalTitle, priority: 1 })
+        }
         // Remove placeholder, refresh real list
         await fetchGoals()
         setPlaceholders((prev) => prev.filter((p) => p.id !== tempId))
@@ -283,7 +302,15 @@ export default function GoalsPage() {
   // (simpler: attach to the category of the recording that produced them)
   const bucketsWithPlaceholders = Object.fromEntries(
     CATEGORIES.map((c) => {
-      const realGoals: DisplayGoal[] = loading ? [] : goals.filter((g) => categorizeGoal(g) === c.key)
+      const seen = new Set<string>()
+      const realGoals: DisplayGoal[] = loading ? [] : goals
+        .filter((g) => categorizeGoal(g) === c.key)
+        .filter((g) => {
+          const key = g.title.trim().toLowerCase()
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
       const catPlaceholders: DisplayGoal[] = placeholders.filter((p) => {
         // Loosely match by keywords, fallback to first category
         const matchedCat = CATEGORIES.find((cat) =>

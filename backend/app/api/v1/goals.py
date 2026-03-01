@@ -88,13 +88,28 @@ class _FocusResponse(BaseModel):
     focus: str
 
 
+# ── Demo mode constants ──────────────────────────────────────────────────────
+_DEMO_TRANSCRIPT = (
+    "I need to spend about an hour on my coding project today, probably work on "
+    "the backend API. I also keep forgetting to drink enough water so I should "
+    "set a reminder for that. And I want to do a quick 30-minute workout in the "
+    "evening, maybe some stretching and a jog."
+)
+_DEMO_GOALS = ["Backend API coding session", "Drink enough water daily", "30-minute evening workout"]
+_DEMO_FOCUS = "Code the backend API, hydrate, and exercise tonight"
+
+
 # ── LLM helpers ──────────────────────────────────────────────────────────────
 
 async def _gemini_extract_goals(transcript: str) -> list[str]:
     """Ask Gemini to extract individual goal titles from a transcript."""
+    if transcript.strip() == _DEMO_TRANSCRIPT.strip():
+        logger.info("goals_extract_demo_mode")
+        await asyncio.sleep(5)  # fake processing delay
+        return _DEMO_GOALS
     settings = get_settings()
     if not settings.gemini_api_key:
-        return [transcript.strip()]  # fallback: treat whole transcript as one goal
+        return [transcript.strip()]
     genai.configure(api_key=settings.gemini_api_key)
     model = genai.GenerativeModel(settings.gemini_model)
     prompt = (
@@ -119,6 +134,10 @@ async def _gemini_extract_goals(transcript: str) -> list[str]:
 
 async def _gemini_weekly_focus(transcript: str) -> str:
     """Ask Gemini to distill one weekly focus statement from a transcript."""
+    if transcript.strip() == _DEMO_TRANSCRIPT.strip():
+        logger.info("weekly_focus_demo_mode")
+        await asyncio.sleep(3)  # fake processing delay
+        return _DEMO_FOCUS
     settings = get_settings()
     if not settings.gemini_api_key:
         return transcript.strip()

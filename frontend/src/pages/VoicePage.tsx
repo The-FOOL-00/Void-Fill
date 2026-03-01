@@ -56,7 +56,7 @@ export default function VoicePage() {
       while (attempts < 30) {
         await new Promise(r => setTimeout(r, 1500))
         const result = await api.voice.result(upload.job_id)
-        if (result.status === 'completed' && result.transcript) break
+        if ((result.status === 'completed' || result.status === 'partial') && result.transcript) break
         if (result.status === 'failed') throw new Error('Transcription failed')
         attempts++
       }

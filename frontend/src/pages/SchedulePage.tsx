@@ -64,6 +64,20 @@ function MicIcon({ size = 22 }: { size?: number }) {
   )
 }
 
+/** Pick a meaningful time slot based on goal title keywords */
+function smartSlot(title: string, idx: number): { hour: number; duration: number } {
+  const t = title.toLowerCase()
+  if (/study|exam|academic|read|learn|class|lecture|assignment/.test(t))
+    return { hour: 9 + idx * 0.5,  duration: 1.5 }
+  if (/work|career|api|coding|project|backend|frontend|meeting|job|interview/.test(t))
+    return { hour: 10 + idx * 0.5, duration: 2 }
+  if (/exercise|workout|gym|run|walk|jog|health|yoga|swim/.test(t))
+    return { hour: 18,             duration: 1 }
+  if (/water|drink|meditat|personal|habit|skill|growth|guitar|journal/.test(t))
+    return { hour: 20,             duration: 0.5 }
+  return { hour: 10 + idx * 1.5,  duration: 1 }
+}
+
 // ── component ─────────────────────────────────────────────────────────────
 export default function SchedulePage() {
   const [blocks, setBlocks]       = useState<ScheduleBlock[]>([])
@@ -76,12 +90,43 @@ export default function SchedulePage() {
   const { state: recState, start, stop, audioBlob } = useVoiceRecorder()
   const uploadPending = useRef(false)
 
-  // fetch data
+  // fetch data + auto-sync goals → schedule blocks
   const reload = useCallback(async () => {
     try {
-      const [bl, vs] = await Promise.all([api.schedule.list(), api.void.now()])
-      setBlocks(bl.blocks ?? [])
+      const [bl, vs, gl] = await Promise.all([api.schedule.list(), api.void.now(), api.goals.list()])
+      const fetchedBlocks = bl.blocks ?? []
+      const fetchedGoals  = (gl.goals ?? []).slice(0, 6)
       setVoidNow(vs)
+
+      // Auto-create a block for every goal that doesn't have one yet
+      const existingTypes = new Set(fetchedBlocks.map(b => b.block_type))
+      const todayBase = new Date()
+      todayBase.setHours(0, 0, 0, 0)
+      let created = 0
+      let slotIdx = 0
+      for (const goal of fetchedGoals) {
+        const key = goal.title.slice(0, 64)
+        if (!existingTypes.has(key)) {
+          const { hour, duration } = smartSlot(goal.title, slotIdx)
+          const s = new Date(todayBase.getTime() + hour * 3_600_000)
+          const e = new Date(s.getTime()          + duration * 3_600_000)
+          await api.schedule.create({
+            start_time: s.toISOString(),
+            end_time:   e.toISOString(),
+            block_type: key,
+          }).catch(() => {})
+          existingTypes.add(key)
+          created++
+        }
+        slotIdx++
+      }
+
+      if (created > 0) {
+        const refreshed = await api.schedule.list()
+        setBlocks(refreshed.blocks ?? [])
+      } else {
+        setBlocks(fetchedBlocks)
+      }
     } finally {
       setLoading(false)
     }
@@ -103,10 +148,11 @@ export default function SchedulePage() {
           while (attempts < 20) {
             await new Promise(r => setTimeout(r, 1500))
             const result = await api.voice.result(upload.job_id)
-            if (result.status === 'completed') break
+            if (result.status === 'completed' || result.status === 'partial') break
             if (result.status === 'failed') throw new Error('Failed')
             attempts++
           }
+          // reload() handles auto-syncing goals → blocks
           await reload()
           setStatusMsg('Schedule updated!')
         } catch {
@@ -130,10 +176,10 @@ export default function SchedulePage() {
     }
   }, [recording, start, stop])
 
-  // Sort blocks by start_time
-  const sortedBlocks = [...blocks].sort((a, b) =>
-    new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-  )
+  // Sort blocks by start_time, then deduplicate by block_type (keep earliest)
+  const sortedBlocks = [...blocks]
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    .filter((block, _, arr) => arr.findIndex(b => b.block_type === block.block_type) === arr.indexOf(block))
 
   return (
     <div className={styles.page}>
@@ -166,7 +212,7 @@ export default function SchedulePage() {
           ))
         ) : sortedBlocks.length === 0 ? (
           <div className={styles.empty}>
-            <p>No blocks yet — record one below</p>
+            <p>No blocks yet — add a goal or record one below</p>
           </div>
         ) : (
           sortedBlocks.map(block => (

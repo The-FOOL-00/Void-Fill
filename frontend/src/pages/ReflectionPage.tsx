@@ -41,7 +41,7 @@ async function pollTranscript(jobId: string, max = 20, interval = 1500): Promise
   for (let i = 0; i < max; i++) {
     await new Promise((r) => setTimeout(r, interval))
     const res = await api.voice.result(jobId)
-    if (res.status === 'completed' && res.transcript) return res.transcript
+    if ((res.status === 'completed' || res.status === 'partial') && res.transcript) return res.transcript
     if (res.status === 'failed') return null
   }
   return null

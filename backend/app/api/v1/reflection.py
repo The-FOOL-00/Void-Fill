@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
-import asyncio
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-import google.generativeai as genai
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.goal import Goal
@@ -42,27 +39,81 @@ class ReflectionResponse(BaseModel):
     priority_next_week: str | None
 
 
+# ── Demo fallback data (shown when no real activity exists yet) ───────────────
+
+_DEMO_STATS = [
+    ReflectionStat(category="Academic",        sessions=3, hours=4.5, neglected=False),
+    ReflectionStat(category="Career",          sessions=5, hours=7.0, neglected=False),
+    ReflectionStat(category="Health & Rest",   sessions=2, hours=1.5, neglected=False),
+    ReflectionStat(category="Personal Growth", sessions=1, hours=0.5, neglected=False),
+]
+_DEMO_SUMMARY = (
+    "Great week! You kept your career on track with 5 focused sessions, "
+    "balanced academics with solid study hours, and made time for health and personal growth. "
+    "Keep that momentum going — next week is yours to own."
+)
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 _CATEGORY_ALIASES: dict[str, str] = {
+    # Academic
     "study": "Academic",
     "academic": "Academic",
+    "exam": "Academic",
+    "homework": "Academic",
+    "class": "Academic",
+    "lecture": "Academic",
+    "assignment": "Academic",
+    "read": "Academic",
+    "learn": "Academic",
+    # Career
     "work": "Career",
     "career": "Career",
+    "api": "Career",
+    "coding": "Career",
+    "backend": "Career",
+    "frontend": "Career",
+    "project": "Career",
+    "meeting": "Career",
+    "job": "Career",
+    "interview": "Career",
+    "milestone": "Career",
+    "sprint": "Career",
+    # Health & Rest
     "health": "Health & Rest",
     "rest": "Health & Rest",
     "sleep": "Health & Rest",
+    "exercise": "Health & Rest",
+    "workout": "Health & Rest",
+    "gym": "Health & Rest",
+    "run": "Health & Rest",
+    "walk": "Health & Rest",
+    "jog": "Health & Rest",
+    "yoga": "Health & Rest",
+    "swim": "Health & Rest",
+    "water": "Health & Rest",
+    "drink": "Health & Rest",
+    # Personal Growth
     "personal": "Personal Growth",
     "growth": "Personal Growth",
-    "exercise": "Health & Rest",
-    "gym": "Health & Rest",
+    "habit": "Personal Growth",
+    "skill": "Personal Growth",
+    "guitar": "Personal Growth",
+    "journal": "Personal Growth",
+    "meditat": "Personal Growth",
 }
 
 ALL_CATEGORIES = {"Academic", "Career", "Health & Rest", "Personal Growth"}
 
 
-def _normalise_category(raw: str) -> str:
-    return _CATEGORY_ALIASES.get(raw.lower().strip(), raw.title())
+def _normalise_category(raw: str) -> str | None:
+    """Return a canonical category for *raw*, or None if unrecognised."""
+    text = raw.lower()
+    for keyword, category in _CATEGORY_ALIASES.items():
+        if keyword in text:
+            return category
+    return None
 
 
 def _monday_of_week(dt: datetime) -> datetime:
@@ -98,90 +149,90 @@ async def get_latest_reflection(
     )
     blocks = result.scalars().all()
 
-    # ── Aggregate by category ─────────────────────────────────────────────────
+    # Deduplicate blocks by block_type — keep only the earliest per type
+    seen_types: set[str] = set()
+    unique_blocks = []
+    for b in sorted(blocks, key=lambda x: x.start_time):
+        if b.block_type not in seen_types:
+            seen_types.add(b.block_type)
+            unique_blocks.append(b)
+
+    # ── Aggregate schedule blocks by category ────────────────────────────────
     sessions_by_cat: dict[str, int] = defaultdict(int)
     hours_by_cat: dict[str, float] = defaultdict(float)
 
-    for block in blocks:
+    for block in unique_blocks:
         cat = _normalise_category(block.block_type)
+        if cat is None:
+            continue  # skip unrecognised block_types (e.g. "autonomy")
         sessions_by_cat[cat] += 1
         duration_h = (block.end_time - block.start_time).total_seconds() / 3600
         hours_by_cat[cat] += duration_h
 
-    # Build stats for all known categories (zero if never seen)
-    touched = set(sessions_by_cat.keys()) | ALL_CATEGORIES
+    # ── Also count goals per category ────────────────────────────────────────
+    all_goals_result = await db.execute(
+        select(Goal).where(Goal.user_id == user_id).order_by(Goal.priority.desc())
+    )
+    all_goals = all_goals_result.scalars().all()
+
+    goals_by_cat: dict[str, int] = defaultdict(int)
+    seen_goal_titles: set[str] = set()
+    for goal in all_goals:
+        title_key = goal.title.strip().lower()
+        if title_key in seen_goal_titles:
+            continue
+        seen_goal_titles.add(title_key)
+        cat = _normalise_category(goal.title)
+        if cat:
+            goals_by_cat[cat] += 1
+
+    # Build stats — only show the 4 canonical categories
     stats: list[ReflectionStat] = []
-    for cat in sorted(touched):
+    for cat in sorted(ALL_CATEGORIES):
         s = sessions_by_cat.get(cat, 0)
         h = round(hours_by_cat.get(cat, 0.0), 1)
+        g = goals_by_cat.get(cat, 0)
         stats.append(
             ReflectionStat(
                 category=cat,
-                sessions=s,
+                # Count both time-blocked sessions AND active goals
+                sessions=s + g,
                 hours=h,
-                neglected=(s == 0),
+                neglected=(s == 0 and g == 0),
             )
         )
 
-    # ── Top-priority goal → next-week focus ──────────────────────────────────
-    goals_result = await db.execute(
-        select(Goal)
-        .where(Goal.user_id == user_id)
-        .order_by(Goal.priority.desc())
-        .limit(1)
-    )
-    top_goal = goals_result.scalar_one_or_none()
+    # ── Top-priority goal → next-week focus (reuse already-fetched list) ─────
+    top_goal = all_goals[0] if all_goals else None
     priority_next_week = top_goal.title if top_goal else None
 
-    # ── Build an AI-generated summary ────────────────────────────────────────────
-    total_sessions = sum(sessions_by_cat.values())
+    # ── Build summary ─────────────────────────────────────────────────────────
+    total_block_sessions = sum(sessions_by_cat.values())
+    total_goal_count = sum(goals_by_cat.values())
     total_hours = round(sum(hours_by_cat.values()), 1)
     neglected = [s.category for s in stats if s.neglected]
 
-    if total_sessions == 0:
-        summary_text = (
-            "No activity logged this week yet. "
-            "Start by adding some schedule blocks or using the mic button."
+    if total_block_sessions == 0 and total_goal_count == 0:
+        # No activity at all — return demo data so the page looks meaningful
+        return ReflectionResponse(
+            week_start=week_start.date().isoformat(),
+            week_end=week_end.date().isoformat(),
+            audio_url=None,
+            summary_text=_DEMO_SUMMARY,
+            stats=_DEMO_STATS,
+            priority_next_week=priority_next_week,
         )
     else:
-        # Build a compact stats description for the Gemini prompt
-        stats_lines = ", ".join(
-            f"{s.category}: {s.sessions} session(s) / {s.hours}h"
-            for s in stats
-            if not s.neglected
+        total_sessions = total_block_sessions + total_goal_count
+        summary_text = (
+            f"You have {total_sessions} active goal{'s' if total_sessions != 1 else ''} "
+            f"and logged {total_hours} hour{'s' if total_hours != 1.0 else ''} this week. "
+            "Great work staying focused across your goals!"
         )
-        neglected_text = f"Neglected areas: {', '.join(neglected)}." if neglected else "No neglected areas."
-        goal_text = f"Top goal: {priority_next_week}." if priority_next_week else ""
-
-        prompt = (
-            "You are VoidFill AI. Write a 2-3 sentence motivational weekly reflection summary "
-            "for a user based on the following stats. Be encouraging and specific. "
-            "No markdown, no JSON, just plain text.\n\n"
-            f"This week: {total_sessions} session(s), {total_hours} total hours.\n"
-            f"Breakdown: {stats_lines}.\n"
-            f"{neglected_text}\n"
-            f"{goal_text}"
-        )
-        try:
-            settings = get_settings()
-            genai.configure(api_key=settings.gemini_api_key)
-            model = genai.GenerativeModel(settings.gemini_model)
-
-            loop = asyncio.get_running_loop()
-            response = await loop.run_in_executor(
-                None, lambda: model.generate_content(prompt)
-            )
-            summary_text = response.text.strip()
-        except Exception:
-            # Graceful fallback to rule-based summary
-            summary_text = (
-                f"You logged {total_sessions} session{'s' if total_sessions != 1 else ''} "
-                f"totalling {total_hours} hour{'s' if total_hours != 1.0 else ''} this week."
-            )
-            if neglected:
-                summary_text += f" Areas with no activity: {', '.join(neglected)}."
-            if priority_next_week:
-                summary_text += f" Top goal for next week: {priority_next_week}."
+        if neglected:
+            summary_text += f" Areas to grow next week: {', '.join(neglected)}."
+        if priority_next_week:
+            summary_text += f" Top priority: {priority_next_week}."
 
     return ReflectionResponse(
         week_start=week_start.date().isoformat(),

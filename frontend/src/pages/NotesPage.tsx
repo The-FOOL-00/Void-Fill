@@ -84,7 +84,7 @@ export default function NotesPage() {
           while (attempts < 20) {
             await new Promise(r => setTimeout(r, 1500))
             const result = await api.voice.result(upload.job_id)
-            if (result.status === 'completed') break
+            if (result.status === 'completed' || result.status === 'partial') break
             if (result.status === 'failed') throw new Error('Failed')
             attempts++
           }

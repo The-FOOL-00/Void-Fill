@@ -31,7 +31,7 @@ async function pollTranscript(jobId: string, maxAttempts = 20): Promise<string |
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((r) => setTimeout(r, 1500))
     const result = await api.voice.result(jobId)
-    if (result.status === 'completed' && result.transcript) return result.transcript
+    if ((result.status === 'completed' || result.status === 'partial') && result.transcript) return result.transcript
     if (result.status === 'failed') return null
   }
   return null

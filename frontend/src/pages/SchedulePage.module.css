@@ -228,3 +228,46 @@
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.5; }
 }
+
+/* -- Goals section -- */
+.goalsSection {
+  margin: 0 0 100px;
+}
+
+.goalsSectionTitle {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-sec);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 10px;
+}
+
+.goalsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.goalChip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-surface-2);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.goalChipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ED1C24;
+  flex-shrink: 0;
+}
+
+.goalChipText {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-pri);
+  line-height: 1.3;
+}
