@@ -46,6 +46,7 @@ export default function OnboardingPage() {
   const [isPolling, setIsPolling] = useState(false)
 
   const { state: recState, start, stop, audioBlob, error, reset } = useVoiceRecorder()
+  const [hasRecorded, setHasRecorded] = useState(false)
   const step = STEPS[stepIndex]
   const isRecording = recState === 'recording'
   const drawerOpen = isRecording || recState === 'stopped' || isPolling || liveText.length > 0
@@ -61,16 +62,23 @@ export default function OnboardingPage() {
       try {
         const { job_id } = await api.voice.upload(audioBlob)
         const transcript = await pollTranscript(job_id)
-        if (!cancelled && transcript) {
-          const next = [...transcripts]
-          next[stepIndex] = transcript
-          setTranscripts(next)
-          setLiveText(transcript)
+        if (!cancelled) {
+          if (transcript) {
+            const next = [...transcripts]
+            next[stepIndex] = transcript
+            setTranscripts(next)
+            setLiveText(transcript)
+          } else {
+            setLiveText('Got it — tap Next to continue')
+          }
         }
       } catch {
-        // silently ignore upload errors during onboarding
+        if (!cancelled) setLiveText('Got it — tap Next to continue')
       } finally {
-        if (!cancelled) setIsPolling(false)
+        if (!cancelled) {
+          setIsPolling(false)
+          setHasRecorded(true)
+        }
       }
     })()
 
@@ -106,6 +114,7 @@ export default function OnboardingPage() {
     if (stepIndex < STEPS.length - 1) {
       setStepIndex((i) => i + 1)
       setLiveText('')
+      setHasRecorded(false)
       reset()
     } else {
       // Onboarding complete → go to home
@@ -114,7 +123,7 @@ export default function OnboardingPage() {
     }
   }
 
-  const canAdvance = transcripts[stepIndex].length > 0 && !isPolling && !isRecording
+  const canAdvance = hasRecorded && !isPolling && !isRecording
 
   return (
     <div className={styles.page}>

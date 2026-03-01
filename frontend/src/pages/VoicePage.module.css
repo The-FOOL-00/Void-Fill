@@ -1,4 +1,4 @@
-/* ── VoicePage ── */
+/* -- VoicePage -- */
 
 .page {
   display: flex;
@@ -8,7 +8,7 @@
   gap: 0;
 }
 
-/* ── Header ── */
+/* -- Header -- */
 .header {
   margin-bottom: 8px;
 }
@@ -17,7 +17,7 @@
   font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--color-text);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .subtitle {
@@ -26,7 +26,7 @@
   margin-top: 4px;
 }
 
-/* ── Stage / mic ── */
+/* -- Stage / mic -- */
 .stageArea {
   flex: 1;
   display: flex;
@@ -34,61 +34,64 @@
   align-items: center;
   justify-content: center;
   gap: 24px;
-  padding: 40px 0;
+  padding: 32px 0;
 }
 
-/* Mic button — 148 px dark ring + red glow when active */
+/* Mic button */
 .micBtn {
-  width: 148px;
-  height: 148px;
+  width: 136px;
+  height: 136px;
   border-radius: 50%;
-  background: #111;
-  border: 2px solid rgba(237, 28, 36, 0.45);
+  background: radial-gradient(circle at 50% 40%, var(--color-surface-2) 0%, var(--color-surface) 70%);
+  border: 2px solid rgba(237, 28, 36, 0.35);
   box-shadow:
-    0 0 0   6px rgba(237, 28, 36, 0.06),
-    0 0  18px 4px rgba(237, 28, 36, 0.12),
-    0 0  36px 8px rgba(237, 28, 36, 0.07);
+    0 0 0 6px rgba(237, 28, 36, 0.05),
+    0 0 24px 4px rgba(237, 28, 36, 0.1);
   color: var(--color-text);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
 }
 
 .micBtn:hover {
   transform: scale(1.04);
+  border-color: rgba(237, 28, 36, 0.5);
+  box-shadow:
+    0 0 0 8px rgba(237, 28, 36, 0.08),
+    0 0 36px 8px rgba(237, 28, 36, 0.18);
 }
 
 .micBtn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none;
 }
 
-/* Recording state — stronger red pulse */
+/* Recording state */
 .micBtnActive {
   border-color: var(--color-accent);
   box-shadow:
-    0 0 0   8px rgba(237, 28, 36, 0.18),
-    0 0  28px 8px rgba(237, 28, 36, 0.28),
-    0 0  52px 16px rgba(237, 28, 36, 0.14);
+    0 0 0 8px rgba(237, 28, 36, 0.12),
+    0 0 32px 8px rgba(237, 28, 36, 0.25),
+    0 0 56px 16px rgba(237, 28, 36, 0.1);
   animation: micPulse 1.6s ease-in-out infinite;
 }
 
 @keyframes micPulse {
-  0%, 100% { box-shadow: 0 0 0 8px rgba(237,28,36,0.18), 0 0 28px 8px rgba(237,28,36,0.28), 0 0 52px 16px rgba(237,28,36,0.14); }
-  50%       { box-shadow: 0 0 0 14px rgba(237,28,36,0.10), 0 0 40px 14px rgba(237,28,36,0.35), 0 0 70px 22px rgba(237,28,36,0.10); }
+  0%, 100% { box-shadow: 0 0 0 8px rgba(237,28,36,0.12), 0 0 32px 8px rgba(237,28,36,0.25); }
+  50%       { box-shadow: 0 0 0 16px rgba(237,28,36,0.06), 0 0 48px 16px rgba(237,28,36,0.3); }
 }
 
-/* Processing state — subtle dim pulse */
+/* Processing state */
 .micBtnProcessing {
   animation: processingPulse 1.2s ease-in-out infinite;
 }
 
 @keyframes processingPulse {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.55; }
+  50%       { opacity: 0.5; }
 }
 
 .stageLabel {
@@ -98,7 +101,7 @@
   max-width: 240px;
 }
 
-/* ── Processing waveform bars ── */
+/* -- Processing waveform bars -- */
 .processingBars {
   display: flex;
   align-items: center;
@@ -114,7 +117,6 @@
   animation-delay: calc(var(--i, 0) * 0.07s);
 }
 
-/* Heights from short → tall → short */
 .bar:nth-child(1)  { height: 8px; }
 .bar:nth-child(2)  { height: 14px; }
 .bar:nth-child(3)  { height: 22px; }
@@ -130,11 +132,11 @@
   to   { transform: scaleY(1);   opacity: 1; }
 }
 
-/* ── Result section ── */
+/* -- Result section -- */
 .resultSection {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   padding-top: 4px;
 }
 
@@ -142,10 +144,10 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 18px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .resultCardHead {
@@ -155,7 +157,7 @@
   font-size: var(--font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--color-text-sec);
 }
 
@@ -165,7 +167,7 @@
   line-height: 1.65;
 }
 
-/* ── Action items list ── */
+/* -- Action items list -- */
 .actionList {
   list-style: none;
   display: flex;
@@ -191,10 +193,10 @@
   margin-top: 7px;
 }
 
-/* ── Reset button ── */
+/* -- Reset button -- */
 .resetBtn {
   width: 100%;
-  padding: 16px;
+  padding: 14px;
   background: var(--color-accent);
   color: #fff;
   font-family: var(--font-family);

@@ -1,4 +1,4 @@
-/* ── SchedulePage ── */
+/* -- SchedulePage -- */
 
 .page {
   display: flex;
@@ -8,7 +8,7 @@
   gap: 0;
 }
 
-/* ── Header ── */
+/* -- Header -- */
 .header {
   margin-bottom: 20px;
 }
@@ -24,7 +24,7 @@
   font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--color-text);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   flex: 1;
 }
 
@@ -34,13 +34,13 @@
   margin-top: 4px;
 }
 
-/* ── Void banner ── */
+/* -- Void banner -- */
 .voidBanner {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(34, 197, 94, 0.08);
-  border: 1px solid rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.06);
+  border: 1px solid rgba(34, 197, 94, 0.15);
   border-radius: var(--radius-lg);
   padding: 14px 16px;
   margin-bottom: 20px;
@@ -50,15 +50,15 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #22c55e;
+  background: var(--color-success);
   flex-shrink: 0;
-  box-shadow: 0 0 8px #22c55e88;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
 }
 
 .voidTitle {
   font-size: var(--font-size-base);
   font-weight: 600;
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .voidSub {
@@ -67,11 +67,11 @@
   margin-top: 2px;
 }
 
-/* ── Timeline ── */
+/* -- Timeline -- */
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
 }
 
@@ -82,7 +82,7 @@
 }
 
 .shimmer {
-  background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-2) 50%, var(--color-surface) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.6s infinite;
 }
@@ -92,27 +92,32 @@
   border-radius: var(--radius-lg);
 }
 
-/* ── Block card ── */
+/* -- Block card -- */
 .block {
   display: flex;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.block:hover {
+  border-color: var(--color-border-hover);
 }
 
 .blockAccent {
-  width: 4px;
-  background: var(--bclr, #555);
+  width: 3px;
+  background: var(--bclr, var(--color-text-muted));
   flex-shrink: 0;
 }
 
 .blockBody {
-  padding: 14px 16px;
+  padding: 13px 16px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .blockTime {
@@ -132,26 +137,26 @@
 }
 
 .blockTitle {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text);
 }
 
 .blockTag {
   font-size: var(--font-size-xs);
-  color: var(--bclr, #555);
+  color: var(--bclr, var(--color-text-muted));
   text-transform: capitalize;
 }
 
-/* ── Empty state ── */
+/* -- Empty state -- */
 .empty {
   text-align: center;
-  padding: 48px 0;
+  padding: 56px 0;
   color: var(--color-text-sec);
   font-size: var(--font-size-sm);
 }
 
-/* ── Status ── */
+/* -- Status -- */
 .status {
   text-align: center;
   font-size: var(--font-size-sm);
@@ -159,10 +164,10 @@
   padding: 8px 0;
 }
 
-/* ── FAB area ── */
+/* -- FAB area -- */
 .fabArea {
   position: fixed;
-  bottom: 80px;           /* above bottom nav */
+  bottom: 80px;
   left: 0; right: 0;
   display: flex;
   flex-direction: column;
@@ -178,8 +183,8 @@
 }
 
 .fab {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: var(--color-accent);
   border: none;
@@ -189,32 +194,33 @@
   justify-content: center;
   cursor: pointer;
   pointer-events: all;
-  box-shadow: 0 4px 24px rgba(237, 28, 36, 0.45);
+  box-shadow: 0 4px 24px rgba(237, 28, 36, 0.35);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .fab:hover {
   transform: scale(1.06);
+  box-shadow: 0 6px 32px rgba(237, 28, 36, 0.45);
 }
 
 .fab:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none;
 }
 
 .fabActive {
-  background: #b30000;
+  background: #cc0c11;
   animation: fabPulse 1.4s ease-in-out infinite;
 }
 
 @keyframes fabPulse {
-  0%, 100% { box-shadow: 0 4px 24px rgba(237,28,36,.5); }
-  50%       { box-shadow: 0 4px 40px rgba(237,28,36,.8); }
+  0%, 100% { box-shadow: 0 4px 24px rgba(237, 28, 36, 0.4); }
+  50%       { box-shadow: 0 4px 44px rgba(237, 28, 36, 0.7); }
 }
 
 .fabProcessing {
-  background: #333;
+  background: var(--color-surface-3);
   animation: fabProcessing 1s ease-in-out infinite;
 }
 

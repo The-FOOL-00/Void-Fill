@@ -392,8 +392,9 @@ function GoalCard({
   const { color, label, Icon } = category
   const latest = goals.slice(0, 3)
   const realGoals = goals.filter((g): g is Goal => !isPlaceholder(g))
-  const lastUpdated = realGoals.length > 0
-    ? realGoals.reduce((a, b) => a.updated_at > b.updated_at ? a : b).updated_at
+  const goalsWithDates = realGoals.filter((g) => g.updated_at || g.created_at)
+  const lastUpdated = goalsWithDates.length > 0
+    ? goalsWithDates.reduce((a, b) => (a.updated_at ?? a.created_at) > (b.updated_at ?? b.created_at) ? a : b).updated_at ?? goalsWithDates[0].created_at
     : null
 
   return (

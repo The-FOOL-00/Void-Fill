@@ -1,4 +1,4 @@
-/* ── Page ─────────────────────────────────────────────────────────────────── */
+/* -- Page ------------------------------------------------------------------- */
 .page {
   display: flex;
   flex-direction: column;
@@ -7,9 +7,9 @@
   padding-bottom: 24px;
 }
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
+/* -- Header ---------------------------------------------------------------- */
 .header {
-  padding: 52px 20px 20px;
+  padding: 48px 20px 20px;
 }
 
 .titleRow {
@@ -20,10 +20,10 @@
 }
 
 .title {
-  font-size: 1.9rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--color-text);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 /* Red mic pill in header */
@@ -39,10 +39,11 @@
   border: none;
   padding: 0;
   flex-shrink: 0;
-  transition: transform var(--transition-fast), opacity var(--transition-fast);
+  transition: transform var(--transition-fast), opacity var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: 0 2px 12px rgba(237, 28, 36, 0.3);
 }
 
-.headerMic:hover  { opacity: 0.85; }
+.headerMic:hover  { opacity: 0.85; box-shadow: 0 4px 20px rgba(237, 28, 36, 0.4); }
 .headerMic:active { transform: scale(0.93); }
 
 .headerMicActive {
@@ -51,7 +52,7 @@
 
 @keyframes micPop {
   from { box-shadow: 0 0 0 0 rgba(237, 28, 36, 0.4); }
-  to   { box-shadow: 0 0 0 8px rgba(237, 28, 36, 0); }
+  to   { box-shadow: 0 0 0 10px rgba(237, 28, 36, 0); }
 }
 
 .subtitle {
@@ -72,17 +73,17 @@
   color: var(--color-accent);
 }
 
-/* ── 2×2 Grid ────────────────────────────────────────────────────────────── */
+/* -- 2x2 Grid -------------------------------------------------------------- */
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
   padding: 0 16px;
 }
 
-/* ── Individual Goal Card ─────────────────────────────────────────────────── */
+/* -- Individual Goal Card --------------------------------------------------- */
 .card {
-  background-color: #111111;
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
   padding: 0 14px 14px;
   display: flex;
@@ -90,52 +91,50 @@
   align-items: flex-start;
   text-align: left;
   cursor: pointer;
-  border: none;
+  border: 1px solid var(--color-border);
   position: relative;
   overflow: hidden;
-  outline: 1px solid rgba(255,255,255,0.04);
-  transition: transform var(--transition-fast), outline-color var(--transition-fast);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
 }
 
-.card:hover  { transform: scale(1.01); }
+.card:hover  { border-color: var(--color-border-hover); }
 .card:active { transform: scale(0.98); }
 
 /* Active (listening) state subtle glow */
 .cardActive {
-  outline: 1.5px solid var(--cat-color, #ED1C24);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cat-color, #ED1C24) 20%, transparent);
+  border-color: var(--cat-color, var(--color-accent));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cat-color, var(--color-accent)) 15%, transparent);
 }
 
-/* Colored top border bar — full width, sits at the very top */
+/* Colored top border bar � full width, sits at the very top */
 .cardTopBar {
-  width: calc(100% + 28px); /* bleed past padding */
+  width: calc(100% + 28px);
   margin-left: -14px;
   height: 3px;
   border-radius: 3px 3px 0 0;
-  background-color: var(--cat-color);
+  background: linear-gradient(90deg, var(--cat-color), color-mix(in srgb, var(--cat-color) 60%, transparent));
   margin-bottom: 14px;
   flex-shrink: 0;
 }
 
 /* Icon circle */
 .iconCircle {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  /* translucent version of the category color */
-  background-color: color-mix(in srgb, var(--cat-color, #ED1C24) 15%, #111);
+  background-color: color-mix(in srgb, var(--cat-color, var(--color-accent)) 12%, var(--color-surface));
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   flex-shrink: 0;
 }
 
 .cardTitle {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--color-text);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .cardGoals {
@@ -148,7 +147,7 @@
 
 .goalItem {
   font-size: var(--font-size-xs);
-  color: #bbbbbb;
+  color: var(--color-text-sec);
   line-height: 1.45;
   overflow: hidden;
   display: -webkit-box;
@@ -165,7 +164,7 @@
 .timestamp {
   font-size: 11px;
   color: var(--color-text-muted);
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 /* Listening badge overlaid on card */
@@ -184,7 +183,7 @@
   height: 12px;
   width: 85%;
   border-radius: 6px;
-  background: linear-gradient(90deg, #1e1e1e 25%, #2a2a2a 50%, #1e1e1e 75%);
+  background: linear-gradient(90deg, var(--color-surface-2) 25%, var(--color-surface-3) 50%, var(--color-surface-2) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
@@ -194,35 +193,34 @@
   100% { background-position: -200% 0; }
 }
 
-/* ── Weekly Focus CTA Card ───────────────────────────────────────────────── */
+/* -- Weekly Focus CTA Card ------------------------------------------------- */
 .ctaCard {
   display: flex;
   align-items: center;
   gap: 14px;
   margin: 16px 16px 0;
-  background-color: #111111;
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
-  padding: 18px 16px;
+  padding: 16px;
   cursor: pointer;
-  border: none;
+  border: 1px solid var(--color-border);
   text-align: left;
-  outline: 1px solid rgba(255,255,255,0.06);
-  transition: opacity var(--transition-fast), outline-color var(--transition-fast);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
   font-family: var(--font-family);
 }
 
-.ctaCard:hover  { opacity: 0.88; }
+.ctaCard:hover  { border-color: var(--color-border-hover); }
 .ctaCard:active { transform: scale(0.98); }
 
 .ctaCardActive {
-  outline-color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .ctaMicCircle {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background-color: rgba(237, 28, 36, 0.18);
+  background: var(--color-accent-dim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -238,11 +236,11 @@
 .ctaText {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .ctaTitle {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -252,13 +250,13 @@
   color: var(--color-text-muted);
 }
 
-/* ── T17: Cache banner ────────────────────────────────────────────────────── */
+/* -- Cache banner ------------------------------------------------------ */
 .cacheBanner {
   display: block;
   width: 100%;
   padding: 8px 20px;
-  background: #1a1a1a;
-  color: #888888;
+  background: var(--color-surface-2);
+  color: var(--color-text-sec);
   font-size: 12px;
   font-family: var(--font-family);
   border: none;
@@ -266,15 +264,15 @@
   text-align: center;
   transition: background var(--transition-fast);
 }
-.cacheBanner:active { background: #222222; }
+.cacheBanner:active { background: var(--color-surface-3); }
 
-/* ── T16: Placeholder goal item + spinner ─────────────────────────────────── */
+/* -- Placeholder goal item + spinner ----------------------------------- */
 .goalItemPlaceholder {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: var(--font-size-xs);
-  color: #888888;
+  color: var(--color-text-sec);
   line-height: 1.45;
   font-style: italic;
 }

@@ -32,11 +32,11 @@ export interface Goal {
   id: UUID;
   user_id: UUID;
   title: string;
-  description: string | null;
+  description?: string | null;
   priority: number;
-  is_active: boolean;
+  is_active?: boolean;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface GoalCreate {
@@ -96,9 +96,7 @@ export interface SuggestionSkipResponse {
 // ── Notes ──────────────────────────────────────────────────────────────────
 export interface Note {
   id: UUID;
-  user_id: UUID;
-  content: string;
-  source_job_id: UUID | null;
+  text: string;
   created_at: string;
 }
 

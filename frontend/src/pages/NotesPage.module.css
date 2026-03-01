@@ -1,4 +1,4 @@
-/* ── NotesPage ── */
+/* -- NotesPage -- */
 
 .page {
   display: flex;
@@ -8,7 +8,7 @@
   gap: 0;
 }
 
-/* ── Header ── */
+/* -- Header -- */
 .header {
   margin-bottom: 20px;
 }
@@ -24,7 +24,7 @@
   font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--color-text);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   flex: 1;
 }
 
@@ -34,11 +34,11 @@
   margin-top: 4px;
 }
 
-/* ── Notes list ── */
+/* -- Notes list -- */
 .list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
 }
 
@@ -49,7 +49,7 @@
 }
 
 .shimmer {
-  background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-2) 50%, var(--color-surface) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.6s infinite;
 }
@@ -59,7 +59,7 @@
   border-radius: var(--radius-lg);
 }
 
-/* ── Note card ── */
+/* -- Note card -- */
 .noteCard {
   width: 100%;
   text-align: left;
@@ -75,8 +75,8 @@
 
 .noteCard:hover,
 .noteCardOpen {
-  border-color: rgba(237, 28, 36, 0.35);
-  background: #111;
+  border-color: rgba(237, 28, 36, 0.25);
+  background: var(--color-surface-2);
 }
 
 .noteTop {
@@ -84,7 +84,7 @@
 }
 
 .noteAccentBar {
-  width: 4px;
+  width: 3px;
   background: var(--color-accent);
   flex-shrink: 0;
 }
@@ -94,7 +94,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .noteText {
@@ -119,7 +119,7 @@
   text-transform: capitalize;
 }
 
-/* ── Empty state ── */
+/* -- Empty state -- */
 .empty {
   text-align: center;
   padding: 56px 0 0;
@@ -133,7 +133,7 @@
   color: var(--color-text-muted);
 }
 
-/* ── Status ── */
+/* -- Status -- */
 .status {
   text-align: center;
   font-size: var(--font-size-sm);
@@ -141,7 +141,7 @@
   padding: 8px 0;
 }
 
-/* ── FAB area ── */
+/* -- FAB area -- */
 .fabArea {
   position: fixed;
   bottom: 80px;
@@ -160,8 +160,8 @@
 }
 
 .fab {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: var(--color-accent);
   border: none;
@@ -171,32 +171,33 @@
   justify-content: center;
   cursor: pointer;
   pointer-events: all;
-  box-shadow: 0 4px 24px rgba(237, 28, 36, 0.45);
+  box-shadow: 0 4px 24px rgba(237, 28, 36, 0.35);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .fab:hover {
   transform: scale(1.06);
+  box-shadow: 0 6px 32px rgba(237, 28, 36, 0.45);
 }
 
 .fab:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none;
 }
 
 .fabActive {
-  background: #b30000;
+  background: #cc0c11;
   animation: fabPulse 1.4s ease-in-out infinite;
 }
 
 @keyframes fabPulse {
-  0%, 100% { box-shadow: 0 4px 24px rgba(237,28,36,.5); }
-  50%       { box-shadow: 0 4px 40px rgba(237,28,36,.8); }
+  0%, 100% { box-shadow: 0 4px 24px rgba(237, 28, 36, 0.4); }
+  50%       { box-shadow: 0 4px 44px rgba(237, 28, 36, 0.7); }
 }
 
 .fabProcessing {
-  background: #333;
+  background: var(--color-surface-3);
   animation: fabProcessing 1s ease-in-out infinite;
 }
 

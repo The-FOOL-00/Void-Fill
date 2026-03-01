@@ -1,8 +1,8 @@
 .page {
   padding: 16px 20px 100px;
   min-height: 100vh;
-  background: #0a0a0a;
-  color: #e5e5e5;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .header {
@@ -10,15 +10,16 @@
 }
 
 .title {
-  font-size: 28px;
+  font-size: 1.75rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
+  letter-spacing: -0.03em;
   margin: 0 0 4px;
 }
 
 .subtitle {
-  font-size: 14px;
-  color: #888;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-sec);
   margin: 0;
 }
 
@@ -30,8 +31,8 @@
 
 .skeleton {
   height: 64px;
-  border-radius: 12px;
-  background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%);
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-2) 50%, var(--color-surface) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
@@ -42,7 +43,7 @@
 }
 
 .error {
-  color: #ef4444;
+  color: var(--color-error);
   text-align: center;
   padding: 24px 0;
 }
@@ -52,19 +53,19 @@
 }
 
 .sectionLabel {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #888;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
   margin: 0 0 10px;
 }
 
 .empty {
-  color: #555;
+  color: var(--color-text-muted);
   text-align: center;
   padding: 20px 0;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .goalList, .actionList {
@@ -74,9 +75,15 @@
 }
 
 .goalCard, .actionCard {
-  background: #141414;
-  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 14px 16px;
+  transition: border-color var(--transition-fast);
+}
+
+.goalCard:hover, .actionCard:hover {
+  border-color: var(--color-border-hover);
 }
 
 .goalRow, .actionRow {
@@ -86,53 +93,55 @@
 }
 
 .goalTitle, .actionTitle {
-  font-size: 15px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
-  color: #e5e5e5;
+  color: var(--color-text);
 }
 
 .goalTime, .actionTime {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #ED1C24;
+  color: var(--color-accent);
 }
 
 .goalSessions, .actionDate {
-  font-size: 12px;
-  color: #666;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
   margin-top: 4px;
   display: block;
 }
 
 .formCard {
-  background: #141414;
-  border-radius: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: 20px;
   margin-bottom: 20px;
 }
 
 .formTitle {
-  font-size: 16px;
+  font-size: var(--font-size-base);
   font-weight: 600;
-  color: #e5e5e5;
+  color: var(--color-text);
   margin: 0 0 12px;
 }
 
 .input {
   width: 100%;
   padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid #333;
-  background: #1a1a1a;
-  color: #e5e5e5;
-  font-size: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
   margin-bottom: 10px;
   outline: none;
   box-sizing: border-box;
+  transition: border-color var(--transition-fast);
 }
 
 .input:focus {
-  border-color: #ED1C24;
+  border-color: var(--color-accent);
 }
 
 .formActions {
@@ -144,23 +153,33 @@
 
 .cancelBtn {
   padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid #333;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
   background: transparent;
-  color: #888;
-  font-size: 14px;
+  color: var(--color-text-sec);
+  font-size: var(--font-size-sm);
   cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.cancelBtn:hover {
+  border-color: var(--color-border-hover);
 }
 
 .recordBtn {
   padding: 8px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: none;
-  background: #ED1C24;
+  background: var(--color-accent);
   color: #fff;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.recordBtn:hover {
+  opacity: 0.85;
 }
 
 .recordBtn:disabled {
@@ -175,7 +194,7 @@
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: #ED1C24;
+  background: var(--color-accent);
   border: none;
   color: #fff;
   display: flex;
@@ -184,4 +203,9 @@
   box-shadow: 0 4px 16px rgba(237, 28, 36, 0.35);
   cursor: pointer;
   z-index: 20;
+  transition: transform var(--transition-fast);
+}
+
+.fab:hover {
+  transform: scale(1.06);
 }
