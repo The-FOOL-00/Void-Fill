@@ -65,7 +65,7 @@ COPY docker/supervisord.railway.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Startup script: patches nginx listen port from $PORT, then launches supervisord
 COPY docker/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+RUN sed -i 's/\r$//' /app/start.sh && chmod +x /app/start.sh
 
 # Railway injects PORT env var — start.sh applies it to nginx at runtime
 CMD ["/app/start.sh"]
