@@ -20,6 +20,8 @@ const RESET_KEYS = [
   'lastSuggestion',
   'cachedGoals',
   'authToken',
+  'userId',
+  'userEmail',
 ]
 
 function ChevronIcon({ rotated }: { rotated?: boolean }) {
@@ -116,7 +118,9 @@ export default function SettingsPage() {
             <div className={styles.avatar}>{avatarLetter}</div>
             <div className={styles.profileInfo}>
               <p className={styles.profileName}>{userName}</p>
-              <p className={styles.profileSub}>Demo account</p>
+              <p className={styles.profileSub}>
+                {localStorage.getItem('userEmail') ?? 'Demo account'}
+              </p>
             </div>
           </div>
         </div>

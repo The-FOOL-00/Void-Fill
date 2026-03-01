@@ -27,6 +27,7 @@ export default function AuthPage() {
 
       localStorage.setItem('authToken', result.access_token)
       localStorage.setItem('userId', result.user_id)
+      localStorage.setItem('userEmail', email.toLowerCase())
 
       // New registrations go through onboarding; returning users go home
       if (mode === 'register') {

@@ -10,7 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import auth, autonomy, goals, habits, memory, notes, schedule, suggestions, voice, void
+from app.api.v1 import auth, autonomy, goals, habits, memory, notes, reflection, schedule, suggestions, voice, void
 from app.core.config import get_settings
 from app.core.database import close_db, init_db
 from app.core.exceptions import (
@@ -193,3 +193,4 @@ app.include_router(notes.router, prefix="/api/v1")
 app.include_router(memory.router, prefix="/api/v1")
 app.include_router(habits.router, prefix="/api/v1")
 app.include_router(autonomy.router, prefix="/api/v1")
+app.include_router(reflection.router, prefix="/api/v1")

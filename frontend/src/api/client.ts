@@ -144,19 +144,16 @@ export const api = {
         body: JSON.stringify(payload),
       }),
 
-    /**
-     * Accept a suggestion (stub — backend endpoint not yet implemented).
-     */
-    accept: async (_suggestionId: string): Promise<import('@/types/api').SuggestionAcceptResponse> => {
-      return { status: 'accepted' };
-    },
+    accept: (suggestionId: string) =>
+      http<import('@/types/api').SuggestionAcceptResponse>(`/suggestions/${suggestionId}/accept`, {
+        method: 'POST',
+      }),
 
-    /**
-     * Skip suggestions (stub — backend endpoint not yet implemented).
-     */
-    skip: async (_suggestionIds: string[]): Promise<import('@/types/api').SuggestionSkipResponse> => {
-      return { status: 'skipped' };
-    },
+    skip: (suggestionIds: string[]) =>
+      http<import('@/types/api').SuggestionSkipResponse>('/suggestions/skip', {
+        method: 'POST',
+        body: JSON.stringify(suggestionIds),
+      }),
   },
 
   // ── Notes ──────────────────────────────────────────────────────────────
