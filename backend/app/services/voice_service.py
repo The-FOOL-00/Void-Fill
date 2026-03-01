@@ -1,5 +1,6 @@
 """Service layer for voice upload and async transcription pipeline."""
 
+import asyncio
 import uuid
 from pathlib import Path
 from uuid import UUID
@@ -46,6 +47,9 @@ class VoiceService:
         audio_path = await self._store_audio_file(file)
 
         job = await self._create_voice_job(user_id, str(audio_path))
+        # Commit the job row NOW so it is visible to the inline background task
+        # (and to the Redis worker) before we enqueue/schedule processing.
+        await self._session.commit()
 
         await self._enqueue_job(job.id)
 
@@ -131,7 +135,23 @@ class VoiceService:
     async def _enqueue_job(job_id: UUID) -> None:
         """Push the job onto the Redis voice processing queue.
 
+        Falls back to inline background processing when Redis is unavailable
+        so the upload endpoint never returns 500 due to a missing queue.
+
         Args:
             job_id: The UUID of the job to enqueue.
         """
-        await enqueue_voice_job(str(job_id))
+        try:
+            await enqueue_voice_job(str(job_id))
+        except Exception as exc:
+            logger.warning(
+                "redis_enqueue_failed_fallback_inline",
+                job_id=str(job_id),
+                error=str(exc),
+            )
+            # Redis not available — schedule inline processing as a background
+            # asyncio task.  process_job() creates its own DB session so it is
+            # safe to run outside the current request context.
+            from app.workers.voice_worker import process_job  # local import to avoid circular deps
+
+            asyncio.create_task(process_job(str(job_id)), name=f"voice-job-{job_id}")

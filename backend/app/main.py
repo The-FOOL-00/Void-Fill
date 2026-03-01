@@ -181,6 +181,40 @@ async def health() -> dict:
     }
 
 
+@app.get("/health/detailed", tags=["health"], summary="Detailed health check with service status")
+async def health_detailed() -> dict:
+    """Return connectivity status for DB and Redis — useful for diagnosing deployment issues."""
+    from sqlalchemy import text as sa_text
+    from app.core.database import engine
+
+    checks: dict = {}
+
+    # Database
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(sa_text("SELECT 1"))
+        checks["database"] = {"status": "ok"}
+    except Exception as exc:
+        checks["database"] = {"status": "error", "detail": str(exc)}
+
+    # Redis
+    try:
+        from app.core.redis import get_redis
+        redis = await get_redis()
+        await redis.ping()
+        checks["redis"] = {"status": "ok", "url": settings.redis_url}
+    except Exception as exc:
+        checks["redis"] = {"status": "error", "detail": str(exc), "url": settings.redis_url}
+
+    overall = "healthy" if all(v["status"] == "ok" for v in checks.values()) else "degraded"
+    return {
+        "status": overall,
+        "app": settings.app_name,
+        "version": settings.app_version,
+        "checks": checks,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Versioned routes
 # ---------------------------------------------------------------------------
