@@ -68,7 +68,7 @@ class TranscriptionService:
         audio_b64 = base64.b64encode(audio_bytes).decode()
 
         genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel(settings.gemini_transcription_model)
 
         response = await model.generate_content_async([
             {"inline_data": {"mime_type": mime_type, "data": audio_b64}},

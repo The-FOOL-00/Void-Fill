@@ -79,7 +79,8 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY"),
     )
-    gemini_model: str = "gemini-2.5-pro"
+    gemini_model: str = "gemini-2.0-flash"
+    gemini_transcription_model: str = "gemini-2.0-flash"
 
     # LLM Provider
     llm_provider: str = "gemini"
