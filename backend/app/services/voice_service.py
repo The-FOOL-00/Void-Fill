@@ -77,6 +77,7 @@ class VoiceService:
             job_id=job.id,
             status=job.status,
             transcript=job.transcript,
+            error=job.error,
             created_at=job.created_at,
         )
 

@@ -20,6 +20,7 @@ class VoiceResultResponse(BaseModel):
     job_id: UUID
     status: str = Field(..., description="queued | processing | completed | failed")
     transcript: Optional[str] = Field(default=None, description="Transcribed text (null until completed)")
+    error: Optional[str] = Field(default=None, description="Error message if job failed")
     created_at: datetime
 
     model_config = {"from_attributes": True}

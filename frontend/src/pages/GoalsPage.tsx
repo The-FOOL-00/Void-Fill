@@ -17,7 +17,7 @@ const CATEGORIES = [
     key: 'career',
     label: 'Career',
     color: '#3B82F6',
-    keywords: ['career', 'job', 'work', 'resume', 'intern', 'finance', 'p&l', 'trading', 'business', 'salary'],
+    keywords: ['career', 'job', 'resume', 'intern', 'finance', 'p&l', 'trading', 'business', 'salary', 'project', 'deadline', 'meeting', 'client', 'sprint', 'coding', 'backend', 'frontend', 'api', 'deploy'],
     Icon: IconBriefcase,
   },
   {
@@ -31,7 +31,7 @@ const CATEGORIES = [
     key: 'health',
     label: 'Health & Rest',
     color: '#10B981',
-    keywords: ['sleep', 'walk', 'run', 'exercise', 'gym', 'health', 'rest', 'meditat', 'diet', 'fitness'],
+    keywords: ['sleep', 'walk', 'run', 'exercise', 'gym', 'health', 'rest', 'meditat', 'diet', 'fitness', 'workout', 'jog', 'water', 'stretch', 'yoga'],
     Icon: IconHeart,
   },
 ] as const
@@ -141,7 +141,7 @@ export default function GoalsPage() {
 
     // â”€â”€ T15: Header mic â€” multi-goal via parseAndCreate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (recorderId === 'goals-header') {
-      setStatusMsg('Processingâ€¦')
+      setStatusMsg('Processing…')
       ;(async () => {
         try {
           const { job_id } = await api.voice.upload(blob)
@@ -161,7 +161,7 @@ export default function GoalsPage() {
 
     // â”€â”€ T18: CTA card â€” weekly focus â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (recorderId === 'goals-cta') {
-      setStatusMsg('Processingâ€¦')
+      setStatusMsg('Processing…')
       ;(async () => {
         try {
           const { job_id } = await api.voice.upload(blob)
@@ -193,7 +193,7 @@ export default function GoalsPage() {
     const catKey = recorderId as CategoryKey
     if (!CATEGORIES.some((c) => c.key === catKey)) return
 
-    setStatusMsg('Processingâ€¦')
+    setStatusMsg('Processing…')
     ;(async () => {
       const tempId = `temp-${Date.now()}`
       let transcript: string | null = null
@@ -206,7 +206,7 @@ export default function GoalsPage() {
         // Push placeholder immediately after transcript arrives (T16)
         const placeholder: PlaceholderGoal = {
           id: tempId,
-          title: transcript.slice(0, 60) + (transcript.length > 60 ? 'â€¦' : ''),
+          title: transcript.slice(0, 60) + (transcript.length > 60 ? '…' : ''),
           isPlaceholder: true,
           isLoading: true,
           priority: 0,
@@ -285,7 +285,16 @@ export default function GoalsPage() {
   // (simpler: attach to the category of the recording that produced them)
   const bucketsWithPlaceholders = Object.fromEntries(
     CATEGORIES.map((c) => {
-      const realGoals: DisplayGoal[] = loading ? [] : goals.filter((g) => categorizeGoal(g) === c.key)
+      // Deduplicate by title — keep only the most-recent goal per unique title
+      const seenTitles = new Set<string>()
+      const realGoals: DisplayGoal[] = loading ? [] : goals
+        .filter((g) => categorizeGoal(g) === c.key)
+        .filter((g) => {
+          const key = g.title.trim().toLowerCase()
+          if (seenTitles.has(key)) return false
+          seenTitles.add(key)
+          return true
+        })
       const catPlaceholders: DisplayGoal[] = placeholders.filter((p) => {
         // Loosely match by keywords, fallback to first category
         const matchedCat = CATEGORIES.find((cat) =>
@@ -327,7 +336,7 @@ export default function GoalsPage() {
           className={styles.cacheBanner}
           onClick={() => void fetchGoals()}
         >
-          Showing cached goals â€” tap to retry
+          Showing cached goals — tap to retry
         </button>
       )}
 
@@ -361,7 +370,7 @@ export default function GoalsPage() {
         <div className={styles.ctaText}>
           <p className={styles.ctaTitle}>
             {isVoiceRecording && voice.activeRecorderId === 'goals-cta'
-              ? 'Listeningâ€¦'
+              ? 'Listening…'
               : weeklyFocus
               ? weeklyFocus
               : "What's your focus this week?"}
@@ -404,7 +413,7 @@ function GoalCard({
       className={`${styles.card} ${active ? styles.cardActive : ''}`}
       style={{ '--cat-color': color } as React.CSSProperties}
       onClick={onTap}
-      aria-label={`${label} goals â€” tap to update by voice`}
+      aria-label={`${label} goals — tap to update by voice`}
     >
       {/* Colored top border */}
       <div className={styles.cardTopBar} />
@@ -447,7 +456,7 @@ function GoalCard({
       )}
 
       {active && (
-        <div className={styles.listeningBadge}>ðŸŽ™ Listeningâ€¦</div>
+        <div className={styles.listeningBadge}>🎙 Listening…</div>
       )}
     </button>
   )
